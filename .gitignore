@@ -1,0 +1,31 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Scratch / build scripts for consolidation
+part_*.py
+assemble_master.py
+run_rigorous_audit.py
+
+# Raw intermediate source documents (consolidated into CONSOLIDADO_MASTER_RECLUTAMIENTO_IA.md)
+consolidado_doc*.md
+INFORME_VIABILIDAD_LINKEDIN_RECRUITER.md
+Informe_Avance_Agentes_IA_Reclutamiento.md
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# IDE / Editor artifacts
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS artifacts
+Thumbs.db
+Desktop.ini
+.DS_Store
