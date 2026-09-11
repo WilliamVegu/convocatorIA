@@ -1,0 +1,21 @@
+De: dm.entel@tcs.com
+Para: sourcing.team@tcs.com
+Asunto: Requerimiento Data Engineer 100% Remoto - Entel Perú
+
+Buen día equipo,
+
+Para la cuenta Entel requerimos incorporar un Data Engineer con 3 a 4 años de experiencia sólida en arquitecturas analíticas.
+
+Requisitos obligatorios:
+- Python avanzado y SQL para procesamiento de grandes volúmenes.
+- Apache Spark (PySpark) y orquestación con Apache Airflow.
+- Construcción y optimización de pipelines ETL y ELT.
+
+Deseables:
+- Experiencia en Google Cloud Platform (GCP), especialmente BigQuery.
+- Databricks y AWS Glue.
+
+Presupuesto y condiciones:
+- Tarifa salarial: Hasta S/. 8,000 bruto mensual.
+- Modalidad: 100% Remoto a nivel nacional (Perú).
+- Cliente: Entel.

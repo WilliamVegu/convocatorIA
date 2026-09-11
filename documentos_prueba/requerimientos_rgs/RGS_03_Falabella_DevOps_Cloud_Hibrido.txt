@@ -1,0 +1,21 @@
+De: falabella.techlead@tcs.com
+Para: talent.acquisition@tcs.com
+Asunto: Vacante DevOps Specialist - Falabella Digital
+
+Hola Reclutamiento,
+
+Necesitamos con urgencia un DevOps Specialist para la célula de Checkout de Falabella Digital.
+
+Requisitos excluyentes:
+- Mínimo 4 años administrando clusters productivos de Kubernetes (EKS / GKE).
+- Automatización de infraestructura con Terraform y Docker.
+- Construcción de pipelines CI/CD con GitLab CI o GitHub Actions.
+- Sólidos fundamentos de Linux y redes cloud.
+
+Requisitos valorados:
+- Nube AWS, monitoreo con Prometheus y Grafana.
+- Conocimientos de Python o Go para scripting.
+
+Presupuesto: Hasta S/. 11,000 según seniority evaluado.
+Modalidad: Híbrido en San Isidro (1 día por semana).
+Cliente: Falabella.

@@ -1,0 +1,25 @@
+De: delivery.manager@tcs.com
+Para: recruiting.lead@tcs.com
+Asunto: URGENTE: 2 Posiciones Backend Java Senior - Cuenta BCP
+
+Hola equipo,
+
+El líder de arquitectura de BCP necesita con urgencia cubrir 2 posiciones de desarrollador backend senior para el proyecto de transferencias inmediatas.
+
+Requisitos indispensables (Must have):
+- Al menos 5 años con Java 17 o superior y Spring Boot 3.
+- Experiencia sólida en Microservicios y mensajería distribuida con Kafka.
+- Manejo avanzado de base de datos Oracle o PostgreSQL.
+
+Requisitos deseables (Nice to have):
+- Nube AWS y contenedores con Docker y Kubernetes.
+- Pruebas unitarias con JUnit y Mockito.
+
+Condiciones del puesto:
+- Presupuesto máximo autorizado: S/. 9,500 bruto mensual en planilla TCS.
+- Modalidad de trabajo: Híbrida (2 días presenciales en sede La Molina, Lima).
+- Cliente: BCP.
+
+Por favor priorizar sourcing inmediato.
+Saludos,
+Delivery Manager TCS Perú

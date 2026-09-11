@@ -1,0 +1,18 @@
+De: interbank.operations@tcs.com
+Para: recruiters@tcs.com
+Asunto: Búsqueda QA Automation Specialist - Interbank Digital Lab
+
+Estimado equipo de selección,
+
+Buscamos un especialista en automatización de pruebas de software para Interbank.
+
+Competencias indispensables:
+- 4 a 5 años en testing automatizado web y móvil.
+- Dominio avanzado de Cypress, Selenium WebDriver y Postman.
+- Lenguajes de scripting: Python o Java.
+- Integración de suites de pruebas en pipelines de CI/CD.
+
+Condiciones:
+- Salario ofrecido: S/. 7,500 bruto mensual.
+- Modalidad: Híbrido (sede Interbank San Isidro).
+- Cliente: Interbank.

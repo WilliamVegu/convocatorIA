@@ -53,16 +53,31 @@ class ExcelAdeccoValidator(AdeccoPort):
         column_map: Dict[str, str] = {}
         for col in df.columns:
             norm_col = normalize_header(col)
-            # Find which canonical concept matches
+            # Find which canonical concept matches: 1. Try exact matches first
             matched_canonical = None
             for canonical, alias_list in ADECCO_COLUMN_ALIASES.items():
+                if canonical in column_map.values():
+                    continue
                 for alias in alias_list:
                     norm_alias = normalize_header(alias)
-                    if norm_alias == norm_col or norm_alias in norm_col:
+                    if norm_alias == norm_col:
                         matched_canonical = canonical
                         break
                 if matched_canonical:
                     break
+
+            # 2. If no exact match, try substring match (only for aliases >= 3 chars or word boundaries)
+            if not matched_canonical:
+                for canonical, alias_list in ADECCO_COLUMN_ALIASES.items():
+                    if canonical in column_map.values():
+                        continue
+                    for alias in alias_list:
+                        norm_alias = normalize_header(alias)
+                        if len(norm_alias) >= 3 and (norm_alias in norm_col or norm_col in norm_alias):
+                            matched_canonical = canonical
+                            break
+                    if matched_canonical:
+                        break
 
             if matched_canonical and matched_canonical not in column_map.values():
                 column_map[col] = matched_canonical

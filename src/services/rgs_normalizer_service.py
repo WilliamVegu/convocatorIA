@@ -8,6 +8,9 @@ from src.domain.entities import RGSNormalizado
 from src.config import config
 from src.logger import logger
 
+# Alias for compatibility with tests
+RGSNormalized = RGSNormalizado
+
 
 class RGSNormalizerService(RGSPort):
     """Normalizes raw emails or Teams messages into parameterized JDs with boolean search syntax."""
