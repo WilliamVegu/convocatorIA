@@ -104,7 +104,8 @@ src/
 │   ├── adecco_port.py           # Puerto de validación de planillas y generación de exclusiones
 │   ├── ctc_port.py              # Puerto de cálculo de compensaciones CTC
 │   ├── auth_port.py             # Puerto de autenticación y RBAC
-│   └── audit_port.py            # Puerto de bitácora inmutable de auditoría
+│   ├── audit_port.py            # Puerto de bitácora inmutable de auditoría
+│   └── alumni_port.py           # Puerto de consulta y repositorio Alumni TCS (Boomerang)
 │
 ├── adapters/                    # Capa 3: Adaptadores de Infraestructura Externa
 │   ├── __init__.py
@@ -117,7 +118,8 @@ src/
 │   │       ├── candidato_repository.py
 │   │       ├── postulacion_repository.py
 │   │       ├── user_repository.py
-│   │       └── audit_repository.py
+│   │       ├── audit_repository.py
+│   │       └── alumni_repository.py
 │   ├── identity/                # Adaptador DNI (APIsPERU + Caché Local SQLite)
 │   │   ├── __init__.py
 │   │   └── apisperu_adapter.py
@@ -156,7 +158,7 @@ src/
 │       ├── p4_validador_adecco.py # Ingesta de planillas masivas con semáforo y detección Boomerang
 │       ├── p5_reporte_exclusion.py# Generador a demanda de reporte de 5 columnas (Ley 29733)
 │       ├── p6_alumni_tcs.py       # Catálogo corporativo de ex-colaboradores (Boomerang)
-│       ├── p7_consola_auditoria.py# Consola central de auditoría global y trazabilidad forense
+│       ├── p7_consola_auditoria.py# Consola central de auditoría global y Tablero de Métricas del embudo
 │       └── p8_gestion_usuarios.py # Administración y elevación de roles (Head of TA)
 │
 ├── app.py                       # Lanzador principal Streamlit (delega a src.ui.app)

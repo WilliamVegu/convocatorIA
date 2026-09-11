@@ -2,25 +2,26 @@
 
 **Input**: Design documents from `specs/001-ats-core-mvp/`  
 **Prerequisites**: [plan.md](plan.md) (required), [spec.md](spec.md) (required for user stories), [research.md](research.md), [data-model.md](data-model.md), [contracts/](contracts/), [quickstart.md](quickstart.md)  
-**Methodology**: Test-Driven Development (TDD) - Las pruebas unitarias y de integración se definen primero para fallar antes de la implementación de cada componente.  
+**Methodology**: Test-Driven Development (TDD) - Las pruebas de contrato, unitarias y de integración se definen primero para fallar antes de la implementación de cada componente de producción.  
 **Organization**: Tareas agrupadas por fases de infraestructura y ordenadas por dependencias estrictas de historias de usuario (US6 → US1 → US2 → US5 → US3 → US4) para garantizar entrega incremental y testing autónomo.
 
 ## Format: `[ID] [P?] [Story] Description`
 
 - **[P]**: Ejecución en paralelo permitida (archivos independientes, sin bloqueos de dependencias).
-- **[Story]**: Etiqueta de historia de usuario (`[US1]`, `[US2]`, `[US3]`, `[US4]`, `[US5]`, `[US6]`).
-- Todas las descripciones contienen rutas exactas de archivos y citas textuales de restricciones normativas y de base de datos.
+- **[Story]**: Etiqueta obligatoria de historia de usuario para fases de negocio (`[US1]`, `[US2]`, `[US3]`, `[US4]`, `[US5]`, `[US6]`).
+- Todas las descripciones contienen rutas exactas de archivos, mapeo directo a requerimientos funcionales (`FR-###`), criterios de éxito (`SC-###`) y citas textuales de restricciones normativas y de base de datos.
 
 ---
 
 ## Phase 1: Setup del Proyecto y Entorno (Shared Infrastructure)
 
-**Purpose**: Inicialización del entorno de desarrollo, paquetes de la arquitectura hexagonal, dependencias y configuración transversal.
+**Purpose**: Inicialización del entorno de desarrollo, paquetes de la arquitectura hexagonal, dependencias, configuración transversal y fixtures de prueba.
 
-- [ ] T001 Inicializar la estructura completa de paquetes Python del proyecto creando los directorios y archivos `__init__.py` en `src/domain/`, `src/ports/`, `src/adapters/persistence/repositories/`, `src/adapters/identity/`, `src/adapters/cv_parser/`, `src/adapters/adecco/`, `src/adapters/security/`, `src/services/`, `src/ui/pages/`, `tests/unit/`, `tests/integration/`, `scripts/` y `data/` según la arquitectura hexagonal definida en [plan.md](plan.md).
+- [ ] T001 Inicializar la estructura completa de paquetes Python del proyecto creando los directorios y archivos `__init__.py` en `src/domain/`, `src/ports/`, `src/adapters/persistence/repositories/`, `src/adapters/identity/`, `src/adapters/cv_parser/`, `src/adapters/adecco/`, `src/adapters/security/`, `src/services/`, `src/ui/pages/`, `tests/unit/`, `tests/integration/`, `tests/contract/`, `scripts/` y `data/` según la arquitectura hexagonal definida en [plan.md](plan.md).
 - [ ] T002 [P] Definir el archivo de dependencias de producción y desarrollo en `requirements.txt` especificando versiones mínimas verificadas (`streamlit>=1.38.0`, `sqlalchemy>=2.0.30`, `pydantic>=2.8.0`, `openpyxl>=3.1.2`, `pandas>=2.2.0`, `pypdf>=4.3.0`, `bcrypt>=4.1.0`, `rapidfuzz>=3.9.0`, `requests>=2.32.0`, `python-dotenv>=1.0.1`, `pytest>=8.2.0`, `pytest-cov`, `langchain>=0.2.14`, `langchain-google-genai>=1.0.8`, `langchain-xai>=0.1.1`).
 - [ ] T003 [P] Crear el módulo de configuración y carga de entorno en `src/config.py` con validación para `DATABASE_URL` (default `sqlite:///ats_demo.db`), `APISPERU_TOKEN`, `APISPERU_BASE_URL` (`https://dniruc.apisperu.com/api/v1/dni`), `GEMINI_API_KEY`, `GROK_API_KEY`, `SECRET_KEY`, `SESSION_TIMEOUT_MINUTES=30`, y crear el archivo plantilla `.env.example` en la raíz del repositorio.
 - [ ] T004 [P] Implementar el módulo centralizado de logging estructurado en `src/logger.py` con formato ISO 8601, rotación de archivos (`ats_system.log`) y salida estándar formateada para consola corporativa.
+- [ ] T005 [P] Configurar el módulo de fixtures compartidos en `tests/conftest.py` con motor SQLite en memoria (`PRAGMA foreign_keys = ON`), fábrica de sesiones de base de datos aisladas con rollback automático tras cada prueba, y fixtures reutilizables para usuarios administradores y candidatos de prueba.
 
 ---
 
@@ -30,25 +31,27 @@
 
 **⚠️ CRITICAL**: Ninguna historia de usuario puede persistir datos sin la finalización de esta fase fundacional.
 
-- [ ] T005 [P] Implementar el gestor agnóstico de conexiones y fábrica de sesiones SQLAlchemy 2.0 en `src/adapters/persistence/database.py` con soporte para SQLite WAL (`journal_mode = WAL`, `foreign_keys = ON`, `busy_timeout = 5000`) y conmutación transparente a PostgreSQL 15+ a través de `DATABASE_URL`.
-- [ ] T006 Implementar los modelos ORM de SQLAlchemy 2.0 en `src/adapters/persistence/models.py` para las 10 entidades funcionales y la tabla auxiliar de caché, transcribiendo las restricciones verbatim de [data-model.md](data-model.md):
-  - `usuarios_rbac`: `id VARCHAR(36) PRIMARY KEY`, `nombres_completos VARCHAR(150) NOT NULL`, `email VARCHAR(120) NOT NULL UNIQUE`, `hashed_password VARCHAR(255) NOT NULL`, `rol VARCHAR(40) NOT NULL DEFAULT 'Compliance_Officer'` con restricción de check de roles (`Head_of_Talent_Acquisition`, `Senior_Technical_Recruiter`, `Account_Recruitment_Coordinator`, `Compliance_Officer`), `estado_cuenta VARCHAR(25) NOT NULL DEFAULT 'Activa'`, `intentos_fallidos INTEGER NOT NULL DEFAULT 0`, `bloqueado_hasta TIMESTAMP NULL`, `ultimo_login TIMESTAMP NULL`, `autorizado_por_id VARCHAR(36) NULL FK usuarios_rbac(id)`, `record_version INTEGER NOT NULL DEFAULT 1`.
-  - `candidatos`: `id VARCHAR(36) PRIMARY KEY`, `tipo_documento VARCHAR(15) NOT NULL DEFAULT 'DNI'`, `numero_documento VARCHAR(20) NOT NULL UNIQUE`, `nombres VARCHAR(100) NOT NULL`, `apellido_paterno VARCHAR(100) NOT NULL`, `apellido_materno VARCHAR(100) NULL DEFAULT ''`, `nombres_completos_normalizado VARCHAR(255) NOT NULL`, `telefono_e164 VARCHAR(20) NOT NULL UNIQUE`, `email VARCHAR(120) NOT NULL UNIQUE`, `fecha_nacimiento DATE NULL`, `ubigeo VARCHAR(6) NULL`, `departamento VARCHAR(50) NULL DEFAULT 'Lima'`, `provincia VARCHAR(50) NULL DEFAULT 'Lima'`, `distrito_residencia VARCHAR(100) NULL`, `direccion_residencia VARCHAR(255) NULL`, `is_tcs_alumni BOOLEAN NOT NULL DEFAULT 0`, `alumni_id VARCHAR(36) NULL FK historial_alumni_tcs(id)`, `estado_identidad VARCHAR(40) NOT NULL DEFAULT 'Validado_Oficialmente'`, `regularizacion_pendiente BOOLEAN NOT NULL DEFAULT 0`, `cv_documento_url VARCHAR(500) NULL`, `cv_hash_sha256 VARCHAR(64) NULL`, `cv_resumen_tecnico TEXT NULL`, `cv_anios_experiencia REAL NULL`, `cv_idiomas_json JSON NULL`, `record_version INTEGER NOT NULL DEFAULT 1`, `created_by_user_id VARCHAR(36) NOT NULL FK usuarios_rbac(id)`, `updated_by_user_id VARCHAR(36) NULL FK usuarios_rbac(id)`.
-  - `postulaciones_procesos`: `id VARCHAR(36) PRIMARY KEY`, `candidato_id VARCHAR(36) NOT NULL FK candidatos(id) ON DELETE RESTRICT`, `cliente_cuenta VARCHAR(100) NOT NULL`, `rgs_vacante_id VARCHAR(50) NOT NULL`, `perfil_tecnico VARCHAR(120) NOT NULL`, `reclutador_asignado_id VARCHAR(36) NOT NULL FK usuarios_rbac(id) ON DELETE RESTRICT`, `fuente_origen VARCHAR(50) NOT NULL CHECK IN ('Adecco', 'LinkedIn_Oficial', 'BYB_Referido', 'Offshore', 'Directo_Alumni', 'Bolsa_Web')`, `trimestre_fiscal VARCHAR(10) NOT NULL`, `estado_embudo VARCHAR(40) NOT NULL DEFAULT 'Nuevo'` con check de estados de embudo, `motivo_cierre_tipo VARCHAR(30) NULL CHECK IN ('Temporal_No_Excluyente', 'Excluyente_Permanente', 'Contratacion_Exitosa', 'Desistimiento')`, `motivo_cierre_detalle TEXT NULL`, `fecha_cierre_descarte TIMESTAMP NULL`, `record_version INTEGER NOT NULL DEFAULT 1`, `created_by_user_id VARCHAR(36) NOT NULL FK usuarios_rbac(id)`.
-  - `screening_tecnico`: `id VARCHAR(36) PRIMARY KEY`, `postulacion_id VARCHAR(36) NOT NULL UNIQUE FK postulaciones_procesos(id) ON DELETE CASCADE`, `evaluador_user_id VARCHAR(36) NOT NULL FK usuarios_rbac(id) ON DELETE RESTRICT`, `fecha_hora_llamada TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP`, `dim1_disponibilidad VARCHAR(30) NOT NULL`, `dim2_resumen_tecnico TEXT NOT NULL`, `dim3_expectativa_declarada REAL NOT NULL`, `dim4_interes_vacante VARCHAR(20) NOT NULL`, `dim5_modalidad_aceptada VARCHAR(20) NOT NULL CHECK IN ('Híbrido', 'Remoto', 'Presencial')`, `dim6_viabilidad_traslado VARCHAR(25) NOT NULL`, `dim6_alerta_distancia_nota VARCHAR(255) NULL`, `dim7_impresion_general TEXT NOT NULL`, `dictamen_humano VARCHAR(35) NOT NULL CHECK IN ('Avanza_Entrevista_Tecnica', 'No_Apto_Filtro_Inicial', 'Enfriar_En_Cartera')`.
-  - `evaluacion_financiera_ctc`: `id VARCHAR(36) PRIMARY KEY`, `postulacion_id VARCHAR(36) NOT NULL UNIQUE FK postulaciones_procesos(id) ON DELETE CASCADE`, `tipo_expectativa VARCHAR(10) NOT NULL DEFAULT 'Bruto' CHECK IN ('Bruto', 'Neto')`, `monto_declarado REAL NOT NULL`, `salario_bruto_mensual REAL NOT NULL`, `factor_ctc REAL NOT NULL DEFAULT 1.56`, `ctc_solicitado REAL NOT NULL`, `ctc_presupuestado REAL NULL`, `variacion_porcentual REAL NULL`, `semaforo_presupuestal VARCHAR(35) NOT NULL DEFAULT 'Pendiente_Presupuesto' CHECK IN ('Dentro_Presupuesto', 'Requiere_Aprobacion', 'Fuera_Banda', 'Pendiente_Presupuesto')`, `requiere_aprobacion BOOLEAN NOT NULL DEFAULT 0`, `aprobado_por_user_id VARCHAR(36) NULL FK usuarios_rbac(id)`, `justificacion_aprobacion TEXT NULL`, `evaluado_por_user_id VARCHAR(36) NOT NULL FK usuarios_rbac(id)`.
-  - `compliance_verificaciones`: `id VARCHAR(36) PRIMARY KEY`, `postulacion_id VARCHAR(36) NOT NULL UNIQUE FK postulaciones_procesos(id) ON DELETE CASCADE`, `estado_bgc VARCHAR(30) NOT NULL DEFAULT 'Pendiente' CHECK IN ('Pendiente', 'En_Proceso', 'Aprobado', 'Observado_No_Apto')`, `fecha_solicitud_bgc TIMESTAMP NULL`, `fecha_cierre_bgc TIMESTAMP NULL`, `consulta_equifax_realizada BOOLEAN NOT NULL DEFAULT 0`, `tiene_deuda_castigada_banca BOOLEAN NOT NULL DEFAULT 0`, `es_elegible_compliance BOOLEAN NOT NULL DEFAULT 1`, `notas_compliance TEXT NULL`, `verificado_por_user_id VARCHAR(36) NULL FK usuarios_rbac(id)`.
-  - `historial_alumni_tcs`: `id VARCHAR(36) PRIMARY KEY`, `tipo_documento VARCHAR(15) NOT NULL DEFAULT 'DNI'`, `numero_documento VARCHAR(20) NOT NULL UNIQUE`, `nombres_completos VARCHAR(200) NOT NULL`, `nombres_normalizado VARCHAR(200) NOT NULL`, `email_corporativo_historico VARCHAR(120) NULL`, `fecha_ingreso DATE NULL`, `fecha_cese DATE NOT NULL`, `ultima_cuenta_proyecto VARCHAR(100) NULL`, `motivo_desvinculacion VARCHAR(150) NULL`, `estatus_recontratacion VARCHAR(35) NOT NULL DEFAULT 'Rehire_Eligible' CHECK IN ('Rehire_Eligible', 'Do_Not_Rehire', 'Requiere_Aprobacion_RRHH')`.
-  - `lotes_planilla_adecco`: `id VARCHAR(36) PRIMARY KEY`, `nombre_proveedor VARCHAR(60) NOT NULL DEFAULT 'Adecco'`, `fecha_hora_carga TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP`, `usuario_carga_id VARCHAR(36) NOT NULL FK usuarios_rbac(id)`, `nombre_archivo_original VARCHAR(255) NOT NULL`, `hash_archivo_sha256 VARCHAR(64) NOT NULL`, `total_filas INTEGER NOT NULL DEFAULT 0`, `cantidad_rojos_duplicados INTEGER NOT NULL DEFAULT 0`, `cantidad_amarillos_reactivables INTEGER NOT NULL DEFAULT 0`, `cantidad_verdes_limpios INTEGER NOT NULL DEFAULT 0`, `cantidad_alumni_detectados INTEGER NOT NULL DEFAULT 0`, `estado_procesamiento VARCHAR(30) NOT NULL DEFAULT 'Completado'`.
-  - `reportes_cartera_exclusiones`: `id VARCHAR(36) PRIMARY KEY`, `destinatario VARCHAR(60) NOT NULL DEFAULT 'Adecco'`, `fecha_hora_generacion TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP`, `usuario_solicitante_id VARCHAR(36) NOT NULL FK usuarios_rbac(id)`, `filtro_cuenta_cliente VARCHAR(100) NULL`, `total_registros_exportados INTEGER NOT NULL DEFAULT 0`, `periodo_vigencia_dias INTEGER NOT NULL DEFAULT 180`, `hash_archivo_sha256 VARCHAR(64) NOT NULL`.
-  - `bitacora_auditoria`: `id VARCHAR(36) PRIMARY KEY`, `timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP`, `usuario_id VARCHAR(36) NOT NULL FK usuarios_rbac(id)`, `usuario_email VARCHAR(120) NOT NULL`, `rol_en_momento VARCHAR(40) NOT NULL`, `tipo_accion VARCHAR(35) NOT NULL`, `entidad_objeto VARCHAR(40) NOT NULL`, `registro_id VARCHAR(36) NOT NULL`, `version_registro INTEGER NULL`, `valores_previos_json TEXT NULL`, `valores_nuevos_json TEXT NULL`, `justificacion_operativa TEXT NULL`, `ip_address VARCHAR(45) NULL DEFAULT '127.0.0.1'`, `session_id VARCHAR(64) NULL`, `nombre_archivo_adjunto VARCHAR(255) NULL`, `hash_integridad_sha256 VARCHAR(64) NULL`.
+- [ ] T006 [P] Implementar el gestor agnóstico de conexiones y fábrica de sesiones SQLAlchemy 2.0 en `src/adapters/persistence/database.py` con soporte para SQLite WAL (`PRAGMA journal_mode = WAL`, `PRAGMA foreign_keys = ON`, `PRAGMA busy_timeout = 5000`) y conmutación transparente a PostgreSQL 15+ a través de `DATABASE_URL`.
+- [ ] T007 Implementar los modelos ORM de SQLAlchemy 2.0 en `src/adapters/persistence/models.py` para las 10 entidades funcionales y la tabla auxiliar de caché, transcribiendo las restricciones verbatim de [data-model.md](data-model.md):
+  - `usuarios_rbac`: `id VARCHAR(36) PRIMARY KEY`, `nombres_completos VARCHAR(150) NOT NULL`, `email VARCHAR(120) NOT NULL UNIQUE`, `hashed_password VARCHAR(255) NOT NULL`, `rol VARCHAR(40) NOT NULL DEFAULT 'Compliance_Officer' CHECK (rol IN ('Head_of_Talent_Acquisition', 'Senior_Technical_Recruiter', 'Account_Recruitment_Coordinator', 'Compliance_Officer'))`, `estado_cuenta VARCHAR(25) NOT NULL DEFAULT 'Activa' CHECK (estado_cuenta IN ('Activa', 'Suspendida', 'Bloqueada_Por_Intentos'))`, `intentos_fallidos INTEGER NOT NULL DEFAULT 0`, `bloqueado_hasta TIMESTAMP NULL`, `ultimo_login TIMESTAMP NULL`, `autorizado_por_id VARCHAR(36) NULL REFERENCES usuarios_rbac(id)`, `record_version INTEGER NOT NULL DEFAULT 1`, `created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP`, `updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP`.
+  - `candidatos`: `id VARCHAR(36) PRIMARY KEY`, `tipo_documento VARCHAR(15) NOT NULL DEFAULT 'DNI' CHECK (tipo_documento IN ('DNI', 'CE', 'Pasaporte'))`, `numero_documento VARCHAR(20) NOT NULL UNIQUE`, `nombres VARCHAR(100) NOT NULL`, `apellido_paterno VARCHAR(100) NOT NULL`, `apellido_materno VARCHAR(100) NULL DEFAULT ''`, `nombres_completos_normalizado VARCHAR(255) NOT NULL`, `telefono_e164 VARCHAR(20) NOT NULL UNIQUE`, `email VARCHAR(120) NOT NULL UNIQUE`, `fecha_nacimiento DATE NULL`, `ubigeo VARCHAR(6) NULL`, `departamento VARCHAR(50) NULL DEFAULT 'Lima'`, `provincia VARCHAR(50) NULL DEFAULT 'Lima'`, `distrito_residencia VARCHAR(100) NULL`, `direccion_residencia VARCHAR(255) NULL`, `is_tcs_alumni BOOLEAN NOT NULL DEFAULT 0`, `alumni_id VARCHAR(36) NULL REFERENCES historial_alumni_tcs(id)`, `estado_identidad VARCHAR(40) NOT NULL DEFAULT 'Validado_Oficialmente' CHECK (estado_identidad IN ('Validado_Oficialmente', 'Pendiente_Regularizacion', 'Captura_Manual_Observada'))`, `regularizacion_pendiente BOOLEAN NOT NULL DEFAULT 0`, `cv_documento_url VARCHAR(500) NULL`, `cv_hash_sha256 VARCHAR(64) NULL`, `cv_resumen_tecnico TEXT NULL`, `cv_anios_experiencia REAL NULL`, `cv_idiomas_json JSON NULL`, `record_version INTEGER NOT NULL DEFAULT 1`, `created_by_user_id VARCHAR(36) NOT NULL REFERENCES usuarios_rbac(id)`, `updated_by_user_id VARCHAR(36) NULL REFERENCES usuarios_rbac(id)`, `created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP`, `updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP`.
+  - `postulaciones_procesos`: `id VARCHAR(36) PRIMARY KEY`, `candidato_id VARCHAR(36) NOT NULL REFERENCES candidatos(id) ON DELETE RESTRICT`, `cliente_cuenta VARCHAR(100) NOT NULL`, `rgs_vacante_id VARCHAR(50) NOT NULL`, `perfil_tecnico VARCHAR(120) NOT NULL`, `reclutador_asignado_id VARCHAR(36) NOT NULL REFERENCES usuarios_rbac(id) ON DELETE RESTRICT`, `fuente_origen VARCHAR(50) NOT NULL CHECK (fuente_origen IN ('Adecco', 'LinkedIn_Oficial', 'BYB_Referido', 'Offshore', 'Directo_Alumni', 'Bolsa_Web'))`, `trimestre_fiscal VARCHAR(10) NOT NULL CHECK (trimestre_fiscal IN ('FY27-Q1', 'FY27-Q2', 'FY27-Q3', 'FY27-Q4'))`, `estado_embudo VARCHAR(40) NOT NULL DEFAULT 'Nuevo' CHECK (estado_embudo IN ('Nuevo', 'Screening_Telefonico', 'Pendiente_Entrevistas', 'Pendiente_Envio_Cliente', 'Entrevista_Cliente', 'Oferta_Economica', 'Oferta_Aceptada', 'Contratado', 'Descartado_Tecnico', 'Descartado_Economico', 'Descartado_Compliance', 'Desistio'))`, `motivo_cierre_tipo VARCHAR(30) NULL CHECK (motivo_cierre_tipo IN ('Temporal_No_Excluyente', 'Excluyente_Permanente', 'Contratacion_Exitosa', 'Desistimiento'))`, `motivo_cierre_detalle TEXT NULL`, `fecha_cierre_descarte TIMESTAMP NULL`, `observaciones TEXT NULL`, `record_version INTEGER NOT NULL DEFAULT 1`, `created_by_user_id VARCHAR(36) NOT NULL REFERENCES usuarios_rbac(id)`, `updated_by_user_id VARCHAR(36) NULL REFERENCES usuarios_rbac(id)`, `created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP`, `updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP`.
+  - `screening_tecnico`: `id VARCHAR(36) PRIMARY KEY`, `postulacion_id VARCHAR(36) NOT NULL UNIQUE REFERENCES postulaciones_procesos(id) ON DELETE CASCADE`, `evaluador_user_id VARCHAR(36) NOT NULL REFERENCES usuarios_rbac(id) ON DELETE RESTRICT`, `fecha_hora_llamada TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP`, `dim1_disponibilidad VARCHAR(30) NOT NULL CHECK (dim1_disponibilidad IN ('Inmediata', '1_semana', '2_semanas', '1_mes', 'Mayor_a_1_mes'))`, `dim2_resumen_tecnico TEXT NOT NULL`, `dim3_expectativa_declarada REAL NOT NULL`, `dim4_interes_vacante VARCHAR(20) NOT NULL CHECK (dim4_interes_vacante IN ('Alto', 'Medio', 'Bajo'))`, `dim5_modalidad_aceptada VARCHAR(20) NOT NULL CHECK (dim5_modalidad_aceptada IN ('Híbrido', 'Remoto', 'Presencial'))`, `dim6_viabilidad_traslado VARCHAR(25) NOT NULL CHECK (dim6_viabilidad_traslado IN ('Viable_Cercano', 'Viable_Con_Conmutacion', 'Alerta_Distancia_Critica'))`, `dim6_alerta_distancia_nota VARCHAR(255) NULL`, `dim7_impresion_general TEXT NOT NULL`, `dictamen_humano VARCHAR(35) NOT NULL CHECK (dictamen_humano IN ('Avanza_Entrevista_Tecnica', 'No_Apto_Filtro_Inicial', 'Enfriar_En_Cartera'))`, `created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP`, `updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP`.
+  - `evaluacion_financiera_ctc`: `id VARCHAR(36) PRIMARY KEY`, `postulacion_id VARCHAR(36) NOT NULL UNIQUE REFERENCES postulaciones_procesos(id) ON DELETE CASCADE`, `tipo_expectativa VARCHAR(10) NOT NULL DEFAULT 'Bruto' CHECK (tipo_expectativa IN ('Bruto', 'Neto'))`, `monto_declarado REAL NOT NULL`, `salario_bruto_mensual REAL NOT NULL`, `factor_ctc REAL NOT NULL DEFAULT 1.56`, `ctc_solicitado REAL NOT NULL`, `ctc_presupuestado REAL NULL`, `variacion_porcentual REAL NULL`, `semaforo_presupuestal VARCHAR(35) NOT NULL DEFAULT 'Pendiente_Presupuesto' CHECK (semaforo_presupuestal IN ('Dentro_Presupuesto', 'Requiere_Aprobacion', 'Fuera_Banda', 'Pendiente_Presupuesto'))`, `requiere_aprobacion BOOLEAN NOT NULL DEFAULT 0`, `aprobado_por_user_id VARCHAR(36) NULL REFERENCES usuarios_rbac(id)`, `justificacion_aprobacion TEXT NULL`, `evaluado_por_user_id VARCHAR(36) NOT NULL REFERENCES usuarios_rbac(id)`, `created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP`, `updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP`.
+  - `compliance_verificaciones`: `id VARCHAR(36) PRIMARY KEY`, `postulacion_id VARCHAR(36) NOT NULL UNIQUE REFERENCES postulaciones_procesos(id) ON DELETE CASCADE`, `estado_bgc VARCHAR(30) NOT NULL DEFAULT 'Pendiente' CHECK (estado_bgc IN ('Pendiente', 'En_Proceso', 'Aprobado', 'Observado_No_Apto'))`, `fecha_solicitud_bgc TIMESTAMP NULL`, `fecha_cierre_bgc TIMESTAMP NULL`, `consulta_equifax_realizada BOOLEAN NOT NULL DEFAULT 0`, `tiene_deuda_castigada_banca BOOLEAN NOT NULL DEFAULT 0`, `es_elegible_compliance BOOLEAN NOT NULL DEFAULT 1`, `notas_compliance TEXT NULL`, `verificado_por_user_id VARCHAR(36) NULL REFERENCES usuarios_rbac(id)`, `created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP`, `updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP`.
+  - `historial_alumni_tcs`: `id VARCHAR(36) PRIMARY KEY`, `tipo_documento VARCHAR(15) NOT NULL DEFAULT 'DNI' CHECK (tipo_documento IN ('DNI', 'CE', 'Pasaporte'))`, `numero_documento VARCHAR(20) NOT NULL UNIQUE`, `nombres_completos VARCHAR(200) NOT NULL`, `nombres_normalizado VARCHAR(200) NOT NULL`, `email_corporativo_historico VARCHAR(120) NULL`, `fecha_ingreso DATE NULL`, `fecha_cese DATE NOT NULL`, `ultima_cuenta_proyecto VARCHAR(100) NULL`, `motivo_desvinculacion VARCHAR(150) NULL`, `estatus_recontratacion VARCHAR(35) NOT NULL DEFAULT 'Rehire_Eligible' CHECK (estatus_recontratacion IN ('Rehire_Eligible', 'Do_Not_Rehire', 'Requiere_Aprobacion_RRHH'))`, `created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP`, `updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP`.
+  - `lotes_planilla_adecco`: `id VARCHAR(36) PRIMARY KEY`, `nombre_proveedor VARCHAR(60) NOT NULL DEFAULT 'Adecco'`, `fecha_hora_carga TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP`, `usuario_carga_id VARCHAR(36) NOT NULL REFERENCES usuarios_rbac(id)`, `nombre_archivo_original VARCHAR(255) NOT NULL`, `hash_archivo_sha256 VARCHAR(64) NOT NULL`, `total_filas INTEGER NOT NULL DEFAULT 0`, `cantidad_rojos_duplicados INTEGER NOT NULL DEFAULT 0`, `cantidad_amarillos_reactivables INTEGER NOT NULL DEFAULT 0`, `cantidad_verdes_limpios INTEGER NOT NULL DEFAULT 0`, `cantidad_alumni_detectados INTEGER NOT NULL DEFAULT 0`, `estado_procesamiento VARCHAR(30) NOT NULL DEFAULT 'Completado' CHECK (estado_procesamiento IN ('Completado', 'Importado_Parcial', 'Fallido_Rollback'))`, `created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP`.
+  - `reportes_cartera_exclusiones`: `id VARCHAR(36) PRIMARY KEY`, `destinatario VARCHAR(60) NOT NULL DEFAULT 'Adecco'`, `fecha_hora_generacion TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP`, `usuario_solicitante_id VARCHAR(36) NOT NULL REFERENCES usuarios_rbac(id)`, `filtro_cuenta_cliente VARCHAR(100) NULL`, `total_registros_exportados INTEGER NOT NULL DEFAULT 0`, `periodo_vigencia_dias INTEGER NOT NULL DEFAULT 180`, `hash_archivo_sha256 VARCHAR(64) NOT NULL`, `created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP`.
+  - `bitacora_auditoria`: `id VARCHAR(36) PRIMARY KEY`, `timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP`, `usuario_id VARCHAR(36) NOT NULL REFERENCES usuarios_rbac(id)`, `usuario_email VARCHAR(120) NOT NULL`, `rol_en_momento VARCHAR(40) NOT NULL`, `tipo_accion VARCHAR(35) NOT NULL CHECK (tipo_accion IN ('Creacion', 'Modificacion', 'Carga_Archivo', 'Exportacion', 'Transicion_Estado', 'Autenticacion', 'Acceso_Denegado', 'Modificacion_Rol', 'Desbloqueo_Manual', 'Fallo_Carga'))`, `entidad_objeto VARCHAR(40) NOT NULL CHECK (entidad_objeto IN ('Candidato', 'Postulacion', 'Screening', 'Evaluacion_CTC', 'Compliance', 'Documento_CV', 'Planilla_Adecco', 'Reporte_Cartera_Exclusiones', 'Usuario'))`, `registro_id VARCHAR(36) NOT NULL`, `version_registro INTEGER NULL`, `valores_previos_json JSON NULL`, `valores_nuevos_json JSON NULL`, `justificacion_operativa TEXT NULL`, `ip_address VARCHAR(45) NULL DEFAULT '127.0.0.1'`, `session_id VARCHAR(64) NULL`, `nombre_archivo_adjunto VARCHAR(255) NULL`, `hash_integridad_sha256 VARCHAR(64) NULL`.
   - `cache_dni_reniec`: `dni VARCHAR(8) PRIMARY KEY`, `nombres VARCHAR(100) NOT NULL`, `apellido_paterno VARCHAR(100) NOT NULL`, `apellido_materno VARCHAR(100) NULL DEFAULT ''`, `fecha_nacimiento DATE NULL`, `ubigeo VARCHAR(6) NULL`, `distrito VARCHAR(100) NULL`, `direccion VARCHAR(255) NULL`, `cached_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP`.
-- [ ] T007 Implementar la lógica de creación DDL y triggers SQL de inmutabilidad en `src/adapters/persistence/ddl.py`, instalando `trg_prevent_update_bitacora` y `trg_prevent_delete_bitacora` para abortar físicamente cualquier intento de `UPDATE` o `DELETE` sobre `bitacora_auditoria`.
-- [ ] T008 Implementar el inicializador y seeder de bootstrap administrativo en `src/adapters/persistence/seed.py`, creando el usuario fundacional `usr-admin-bootstrap-001` (`admin.ta@tcs.com`, `Head_of_Talent_Acquisition`, hash de `Password123!`) y el primer asiento de auditoría en `bitacora_auditoria`.
-- [ ] T009 [P] Implementar las clases de excepciones tipadas del dominio en `src/domain/exceptions.py` (`EntityNotFoundError`, `DuplicateEntityError`, `OptimisticLockError`, `AuthenticationError`, `AccountLockedError`, `InsufficientPermissionsError`, `AuditIntegrityError`, `FinancialValidationError`).
-- [ ] T010 [P] Implementar los objetos de valor (Value Objects) inmutables en `src/domain/value_objects.py` (`TelefonoE164`, `DocumentoIdentidad`, `EmailCorporativo`, `PorcentajeVariacion`, `MonedaPEN`).
+- [ ] T008 Implementar la lógica de creación DDL y triggers SQL de inmutabilidad en `src/adapters/persistence/ddl.py`, instalando `trg_prevent_update_bitacora` y `trg_prevent_delete_bitacora` para abortar físicamente cualquier intento de `UPDATE` o `DELETE` sobre `bitacora_auditoria`.
+- [ ] T009 Implementar el inicializador y seeder de bootstrap administrativo en `src/adapters/persistence/seed.py`, creando el usuario fundacional `usr-admin-bootstrap-001` (`admin.ta@tcs.com`, `Head_of_Talent_Acquisition`, hash bcrypt de `Password123!`) y el primer asiento de auditoría en `bitacora_auditoria`.
+- [ ] T010 [P] Implementar las clases de dominio puras en `src/domain/entities.py` (`Usuario`, `Candidato`, `Postulacion`, `ScreeningTecnico`, `EvaluacionCTC`, `ComplianceVerificacion`, `HistorialAlumni`, `LoteAdecco`, `ReporteExclusiones`, `RegistroAuditoria`) desacopladas de la persistencia ORM.
+- [ ] T011 [P] Implementar las clases de excepciones tipadas del dominio en `src/domain/exceptions.py` (`EntityNotFoundError`, `DuplicateEntityError`, `OptimisticLockError`, `AuthenticationError`, `AccountLockedError`, `InsufficientPermissionsError`, `AuditIntegrityError`, `FinancialValidationError`).
+- [ ] T012 [P] Implementar los objetos de valor (Value Objects) inmutables en `src/domain/value_objects.py` (`TelefonoE164`, `DocumentoIdentidad`, `EmailCorporativo`, `PorcentajeVariacion`, `MonedaPEN`).
+- [ ] T013 [P] Ejecutar y validar la suite de pruebas de contratos de base de datos en `tests/contract/test_database_ddl.py` verificando la creación de las 11 tablas, claves foráneas, restricciones check y el bloqueo físico de mutación y eliminación sobre `bitacora_auditoria`.
 
-**Checkpoint**: Base de datos, esquemas relacionales, triggers de inmutabilidad y usuario administrador inicial listos y verificables con `pytest tests/contract/test_database_ddl.py`.
+**Checkpoint**: Base de datos, esquemas relacionales, triggers de inmutabilidad, entidades puras y usuario administrador inicial listos y verificables con `pytest tests/contract/test_database_ddl.py`.
 
 ---
 
@@ -56,23 +59,24 @@
 
 ### Phase 3.1: User Story 6 - Autenticación, RBAC y Bitácora Inmutable (Priority: P1)
 
-**Goal**: Proveer autenticación segura con bcrypt, restricción de dominios `@tcs.com`, asignación inicial del rol de mínimo privilegio (`Compliance_Officer`), bloqueo preventivo por 5 intentos fallidos, elevación formal de roles por `Head_of_Talent_Acquisition` y trazabilidad append-only transversal.
+**Goal**: Proveer autenticación segura con bcrypt, restricción de dominios `@tcs.com`, asignación inicial del rol de mínimo privilegio (`Compliance_Officer`), bloqueo preventivo por 5 intentos fallidos durante 15 minutos, elevación formal de roles por `Head_of_Talent_Acquisition` y trazabilidad append-only transversal.
 
 **Independent Test**: Registrar una cuenta `@tcs.com`, verificar que inicia con rol `Compliance_Officer` en modo solo lectura, comprobar que al intentar mutar datos se bloquea y se asienta `Acceso_Denegado`, elevar el rol con el usuario admin y verificar que cada mutación asienta en `bitacora_auditoria` con usuario, timestamp y deltas JSON.
 
 #### Tests para User Story 6 (TDD - Escribir primero y verificar fallo)
 
-- [ ] T011 [P] [US6] Escribir pruebas unitarias de hashing bcrypt, validación de contraseñas complejas y bloqueo de cuentas en `tests/unit/test_rbac_security.py`.
-- [ ] T012 [P] [US6] Escribir pruebas de integración para la inmutabilidad física y no repudiación de `bitacora_auditoria` en `tests/integration/test_audit_immutability.py`.
+- [ ] T014 [P] [US6] Ejecutar y validar las pruebas de contrato de esquemas de autenticación y auditoría en `tests/contract/test_auth_audit_contracts.py`.
+- [ ] T015 [P] [US6] Escribir pruebas unitarias de hashing bcrypt, validación de contraseñas complejas y bloqueo de cuentas en `tests/unit/test_rbac_security.py`.
+- [ ] T016 [P] [US6] Escribir pruebas de integración para la inmutabilidad física y no repudiación de `bitacora_auditoria` en `tests/integration/test_audit_immutability.py`.
 
 #### Implementación para User Story 6
 
-- [ ] T013 [P] [US6] Definir las interfaces abstractas de puertos en `src/ports/auth_port.py` (`AuthPort`) y `src/ports/audit_port.py` (`AuditPort`).
-- [ ] T014 [P] [US6] Implementar el hasher de contraseñas con bcrypt en `src/adapters/security/password_hasher.py` (`hash_password`, `verify_password`, validación de 8+ caracteres, mayúscula, minúscula, número y símbolo).
-- [ ] T015 [P] [US6] Implementar el repositorio de usuarios corporativos en `src/adapters/persistence/repositories/user_repository.py` (`get_by_email`, `get_by_id`, `create_user`, `update_user_role`, `increment_failed_attempts`, `reset_failed_attempts`, `lock_account_until`).
-- [ ] T016 [P] [US6] Implementar el repositorio append-only de auditoría en `src/adapters/persistence/repositories/audit_repository.py` (`append_log`, `list_logs`, `filter_logs` con filtros por usuario, entidad, tipo de acción y fechas; sin métodos de actualización o borrado).
-- [ ] T017 [US6] Implementar el servicio de aplicación `AuthService` en `src/services/auth_service.py` (registro restringido a `@tcs.com`, rol default `Compliance_Officer`, bloqueo tras 5 intentos fallidos por 15 minutos, verificación de credenciales, y delegación de elevación de roles).
-- [ ] T018 [US6] Implementar el servicio de auditoría `AuditService` en `src/services/audit_service.py` (`record_mutation`, `record_file_upload`, `record_export`, `record_security_event` persistiendo el usuario actor, rol, entidad, deltas JSON antes/después y justificación).
+- [ ] T017 [P] [US6] Definir las interfaces abstractas de puertos en `src/ports/auth_port.py` (`AuthPort`) y `src/ports/audit_port.py` (`AuditPort`).
+- [ ] T018 [P] [US6] Implementar el hasher de contraseñas con bcrypt en `src/adapters/security/password_hasher.py` (`hash_password`, `verify_password`, validación de 8+ caracteres, mayúscula, minúscula, número y símbolo).
+- [ ] T019 [P] [US6] Implementar el repositorio de usuarios corporativos en `src/adapters/persistence/repositories/user_repository.py` (`get_by_email`, `get_by_id`, `create_user`, `update_user_role`, `increment_failed_attempts`, `reset_failed_attempts`, `lock_account_until`).
+- [ ] T020 [P] [US6] Implementar el repositorio append-only de auditoría en `src/adapters/persistence/repositories/audit_repository.py` (`append_log`, `list_logs`, `filter_logs` con filtros por usuario, entidad, tipo de acción y fechas; sin métodos de actualización o borrado).
+- [ ] T021 [US6] Implementar el servicio de aplicación `AuthService` en `src/services/auth_service.py` (registro restringido a `@tcs.com`, rol default `Compliance_Officer`, bloqueo tras 5 intentos fallidos por 15 minutos, verificación de credenciales, y delegación de elevación de roles).
+- [ ] T022 [US6] Implementar el servicio de auditoría `AuditService` en `src/services/audit_service.py` (`record_mutation`, `record_file_upload`, `record_export`, `record_security_event` persistiendo el usuario actor, rol, entidad, deltas JSON antes/después y justificación).
 
 **Checkpoint**: Autenticación, RBAC y auditoría plenamente funcionales. Todas las historias posteriores inyectarán `AuditService` y `AuthService`.
 
@@ -80,27 +84,28 @@
 
 ### Phase 3.2: User Story 1 - Ficha Única de Candidato, DNI, E.164, CV Parsing y Screening Humano (Priority: P1) 🎯 MVP
 
-**Goal**: Erradicar las 25 horas semanales de transcripción manual en `BD GENERAL FY27` mediante la Ficha Única: autollenado por DNI (<5ms desde caché local o APIsPERU), cálculo dinámico de edad (erradicando los 127 años del Excel), normalización canónica E.164 (`+519XXXXXXXX`), enlace interactivo a WhatsApp Web con mensaje protocolar, extracción estructurada de CVs con LangChain Gemini/Grok y fallback heurístico local `pypdf`, alerta de conmutación geográfica y registro de las 7 dimensiones de la llamada humana.
+**Goal**: Erradicar las 25 horas semanales de transcripción manual en `BD GENERAL FY27` mediante la Ficha Única: autollenado por DNI (<5ms desde caché local o APIsPERU), cálculo dinámico de edad (erradicando los 127 años del Excel), normalización canónica E.164 (`+519XXXXXXXX`), enlace interactivo a WhatsApp Web con mensaje protocolar, extracción estructurada de CVs con LangChain Gemini/Grok y fallback heurístico local `pypdf`, alerta de conmutación geográfica, procesamiento de cola de regularización offline y registro de las 7 dimensiones de la llamada humana.
 
 **Independent Test**: Registrar a un candidato ingresando DNI `76128709`, verificar autollenado y cálculo de edad real, ingresar teléfono `989322088` verificando conversión a `+51989322088` y botón WhatsApp, cargar un CV en PDF verificando extracción estructurada censurando atributos protegidos, y registrar las 7 dimensiones de la llamada con alerta geográfica de traslado.
 
 #### Tests para User Story 1 (TDD - Escribir primero y verificar fallo)
 
-- [ ] T019 [P] [US1] Escribir pruebas unitarias de normalización telefónica canónica E.164 y generación de URLs de WhatsApp Web en `tests/unit/test_e164_normalizer.py`.
-- [ ] T020 [P] [US1] Escribir pruebas unitarias de cálculo dinámico de edad sin año bisiesto ni offsets estáticos en `tests/unit/test_age_calculator.py`.
-- [ ] T021 [P] [US1] Escribir pruebas unitarias del extractor heurístico local de CVs en `tests/unit/test_cv_heuristic_parser.py`.
+- [ ] T023 [P] [US1] Ejecutar y validar las pruebas de contrato de esquemas de DNI en `tests/contract/test_dni_contracts.py` y extracción de CV en `tests/contract/test_cv_contracts.py`.
+- [ ] T024 [P] [US1] Escribir pruebas unitarias de normalización telefónica canónica E.164 y generación de URLs de WhatsApp Web en `tests/unit/test_e164_normalizer.py`.
+- [ ] T025 [P] [US1] Escribir pruebas unitarias de cálculo dinámico de edad en runtime sin año bisiesto ni offsets estáticos en `tests/unit/test_age_calculator.py`.
+- [ ] T026 [P] [US1] Escribir pruebas unitarias del extractor heurístico local de CVs en `tests/unit/test_cv_heuristic_parser.py`.
 
 #### Implementación para User Story 1
 
-- [ ] T022 [P] [US1] Definir las interfaces de puertos para DNI (`DNIPort`) en `src/ports/dni_port.py` y extractor de CVs (`CVParserPort`) en `src/ports/cv_parser_port.py`.
-- [ ] T023 [P] [US1] Implementar el adaptador de identidad nacional en `src/adapters/identity/apisperu_adapter.py` consultando en primer orden `cache_dni_reniec`, en segundo orden el endpoint de APIsPERU (`https://dniruc.apisperu.com/api/v1/dni/`), persistiendo resultados en caché, y degradando a captura manual con marca `Pendiente_Regularizacion` ante fallas de red.
-- [ ] T024 [P] [US1] Implementar el extractor heurístico local 100% offline basado en `pypdf` y diccionarios de habilidades tecnológicas en `src/adapters/cv_parser/heuristic_extractor.py`.
-- [ ] T025 [P] [US1] Implementar el extractor LangChain multi-proveedor (soporte dual para `ChatGoogleGenerativeAI` con `gemini-2.5-flash` y `ChatXAI` con `grok-2` usando structured outputs Pydantic) en `src/adapters/cv_parser/langchain_extractor.py`.
-- [ ] T026 [P] [US1] Implementar el repositorio de candidatos en `src/adapters/persistence/repositories/candidato_repository.py` (`get_by_id`, `get_by_dni`, `get_by_phone`, `get_by_email`, `create`, `update` con control de concurrencia optimista `record_version`).
-- [ ] T027 [P] [US1] Implementar el repositorio de postulaciones y screening en `src/adapters/persistence/repositories/postulacion_repository.py` (`create_postulacion`, `update_postulacion_status`, `create_screening`, `get_screening_by_postulacion`).
-- [ ] T028 [P] [US1] Implementar la matriz de distancias y cálculo de alerta geográfica de conmutación en `src/services/commute_matrix.py` (evaluando distrito de residencia vs. sede cliente, e.g. VMT a La Molina >90 min emitiendo `Alerta_Distancia_Critica`).
-- [ ] T029 [US1] Implementar el servicio de aplicación `CandidateService` en `src/services/candidate_service.py` (orquestación de consulta DNI, cálculo de edad, normalización E.164, prevención de duplicados exactos, parsing de CV y registro de auditoría).
-- [ ] T030 [US1] Implementar el servicio de aplicación `ScreeningService` en `src/services/screening_service.py` (registro de las 7 dimensiones humanas, alerta geográfica de traslado, dictamen soberano HITL y vinculación obligatoria al evaluador autenticado).
+- [ ] T027 [P] [US1] Definir las interfaces de puertos para DNI (`DNIPort`) en `src/ports/dni_port.py` y extractor de CVs (`CVParserPort`) en `src/ports/cv_parser_port.py`.
+- [ ] T028 [P] [US1] Implementar el adaptador de identidad nacional en `src/adapters/identity/apisperu_adapter.py` consultando en primer orden `cache_dni_reniec`, en segundo orden el endpoint de APIsPERU (`https://dniruc.apisperu.com/api/v1/dni/`), persistiendo resultados en caché local, y degradando a captura manual con marca `Pendiente_Regularizacion` ante fallas de red.
+- [ ] T029 [P] [US1] Implementar el extractor heurístico local 100% offline basado en `pypdf` y diccionarios de habilidades tecnológicas en `src/adapters/cv_parser/heuristic_extractor.py` censurando cualquier atributo demográfico protegido (edad, género, foto, domicilio exacto).
+- [ ] T030 [P] [US1] Implementar el extractor LangChain multi-proveedor (soporte dual para `ChatGoogleGenerativeAI` con `gemini-2.5-flash` y `ChatXAI` con `grok-2` usando structured outputs Pydantic) en `src/adapters/cv_parser/langchain_extractor.py`.
+- [ ] T031 [P] [US1] Implementar el repositorio de candidatos en `src/adapters/persistence/repositories/candidato_repository.py` (`get_by_id`, `get_by_dni`, `get_by_phone`, `get_by_email`, `create`, `update` con control de concurrencia optimista `record_version` y listado de candidatos con regularización pendiente).
+- [ ] T032 [P] [US1] Implementar el repositorio de postulaciones y screening en `src/adapters/persistence/repositories/postulacion_repository.py` (`create_postulacion`, `update_postulacion_status`, `create_screening`, `get_screening_by_postulacion`).
+- [ ] T033 [P] [US1] Implementar la matriz de distancias y cálculo de alerta geográfica de conmutación en `src/services/commute_matrix.py` (evaluando distrito de residencia vs. sede cliente, e.g. VMT a La Molina >90 min emitiendo `Alerta_Distancia_Critica`).
+- [ ] T034 [US1] Implementar el servicio de aplicación `CandidateService` en `src/services/candidate_service.py` (orquestación de consulta DNI, cálculo de edad, normalización E.164, prevención de duplicados exactos, procesamiento de la cola de regularización offline `process_pending_regularizations`, control de concurrencia optimista y registro de auditoría).
+- [ ] T035 [US1] Implementar el servicio de aplicación `ScreeningService` en `src/services/screening_service.py` (registro de las 7 dimensiones humanas, alerta geográfica de traslado, dictamen soberano HITL y vinculación obligatoria al evaluador autenticado).
 
 **Checkpoint**: Ficha Única, DNI, WhatsApp, CV Parsing y Screening Humano completados e independientemente verificables.
 
@@ -108,21 +113,22 @@
 
 ### Phase 3.3: User Story 2 - Validador Masivo de Planillas de Adecco con Semáforo Algorítmico (Priority: P2)
 
-**Goal**: Erradicar las 5 horas semanales de cotejo manual de planillas con Adecco (Proceso 3) mediante ingesta tolerante a alias de encabezados, semáforo algorítmico instantáneo (🔴 Duplicado activo o exclusión permanente, 🟡 Reactivable >180 días con causa subsanable, 🟢 Inédito) e importación atómica en lote.
+**Goal**: Erradicar las 5 horas semanales de cotejo manual de planillas con Adecco (Proceso 3) mediante ingesta tolerante a alias de encabezados, celdas combinadas y filas vacías, semáforo algorítmico instantáneo (🔴 Duplicado activo o exclusión permanente, 🟡 Reactivable >180 días con causa subsanable, 🟢 Inédito) e importación atómica en lote con rollback ante caídas.
 
 **Independent Test**: Cargar una planilla de prueba de 20 registros, verificar la clasificación exacta de cada fila en los colores del semáforo con su justificación en <5 segundos, y confirmar la importación de perfiles limpios verificando el registro de auditoría del lote.
 
 #### Tests para User Story 2 (TDD - Escribir primero y verificar fallo)
 
-- [ ] T031 [P] [US2] Escribir pruebas unitarias de deduplicación fonética y similitud de cadenas (Double Metaphone y Token Sort Ratio >=85%) en `tests/unit/test_deduplication.py`.
-- [ ] T032 [P] [US2] Escribir pruebas de integración de ingesta masiva e importación atómica de lotes en `tests/integration/test_adecco_batch_import.py`.
+- [ ] T036 [P] [US2] Ejecutar y validar las pruebas de contrato de esquemas de Adecco en `tests/contract/test_adecco_contracts.py`.
+- [ ] T037 [P] [US2] Escribir pruebas unitarias de deduplicación fonética y similitud de cadenas (Double Metaphone y Token Sort Ratio >=85%) en `tests/unit/test_deduplication.py`.
+- [ ] T038 [P] [US2] Escribir pruebas de integración de ingesta masiva, mapeo de alias y rollback atómico transaccional en `tests/integration/test_adecco_batch_import.py`.
 
 #### Implementación para User Story 2
 
-- [ ] T033 [P] [US2] Implementar el servicio de deduplicación multicriterio en `src/services/deduplication_service.py` (cotejo exacto DNI/email/E.164, remoción de partículas en nombres y similitud fonética con `rapidfuzz`).
-- [ ] T034 [P] [US2] Definir el puerto de procesamiento de planillas externas (`AdeccoPort`) en `src/ports/adecco_port.py`.
-- [ ] T035 [P] [US2] Implementar el adaptador de ingesta Excel con mapeo semántico de alias (`Móvil`/`Celular` → `telefono_raw`, `DNI`/`Documento` → `documento_raw`, `Puesto`/`Perfil` → `perfil_raw`) en `src/adapters/adecco/excel_validator.py`.
-- [ ] T036 [US2] Implementar el servicio de aplicación `AdeccoService` en `src/services/adecco_service.py` (evaluación algorítmica de planillas, reglas de semáforo 🔴/🟡/🟢, detección de causas de exclusión permanente, importación atómica en lote y registro en `lotes_planilla_adecco` y `bitacora_auditoria`).
+- [ ] T039 [P] [US2] Definir el puerto de procesamiento de planillas externas (`AdeccoPort`) en `src/ports/adecco_port.py`.
+- [ ] T040 [P] [US2] Implementar el servicio de deduplicación multicriterio en `src/services/deduplication_service.py` (cotejo exacto DNI/email/E.164, remoción de partículas en nombres y similitud fonética con `rapidfuzz`).
+- [ ] T041 [P] [US2] Implementar el adaptador de ingesta Excel con mapeo semántico de alias (`Móvil`/`Celular` → `telefono_raw`, `DNI`/`Documento` → `documento_raw`, `Puesto`/`Perfil` → `perfil_raw`), tolerancia a celdas combinadas y omisión de filas vacías en `src/adapters/adecco/excel_validator.py`.
+- [ ] T042 [US2] Implementar el servicio de aplicación `AdeccoService` en `src/services/adecco_service.py` (evaluación algorítmica de planillas en <100ms por fila, reglas de semáforo 🔴/🟡/🟢, detección de causas de exclusión permanente, importación atómica en lote con rollback ante excepciones y registro en `lotes_planilla_adecco` y `bitacora_auditoria`).
 
 **Checkpoint**: Ingesta masiva y semáforo de Adecco operativos e integrables.
 
@@ -136,12 +142,13 @@
 
 #### Tests para User Story 5 (TDD - Escribir primero y verificar fallo)
 
-- [ ] T037 [P] [US5] Escribir pruebas unitarias de coincidencia exacta y fonética contra el catálogo Alumni en `tests/unit/test_boomerang_detection.py`.
+- [ ] T043 [P] [US5] Escribir pruebas unitarias de coincidencia exacta y fonética contra el catálogo Alumni en `tests/unit/test_boomerang_detection.py`.
 
 #### Implementación para User Story 5
 
-- [ ] T038 [P] [US5] Implementar el repositorio corporativo de alumni en `src/adapters/persistence/repositories/alumni_repository.py` (`get_by_dni`, `get_by_email`, `search_by_normalized_name`, `list_all`).
-- [ ] T039 [US5] Implementar el servicio `AlumniService` en `src/services/alumni_service.py` (detección automática de ex-colaboradores, validación de condiciones de salida y emisión del dictamen Boomerang).
+- [ ] T044 [P] [US5] Definir la interfaz abstracta del puerto Alumni (`AlumniPort`) en `src/ports/alumni_port.py`.
+- [ ] T045 [P] [US5] Implementar el repositorio corporativo de alumni en `src/adapters/persistence/repositories/alumni_repository.py` (`get_by_dni`, `get_by_email`, `search_by_normalized_name`, `list_all`).
+- [ ] T046 [US5] Implementar el servicio `AlumniService` en `src/services/alumni_service.py` (detección automática de ex-colaboradores, validación de condiciones de salida y emisión del dictamen Boomerang para prevenir comisiones indebidas).
 
 **Checkpoint**: Detección Boomerang operativa tanto en la Ficha Única como en el Validador Masivo de Adecco.
 
@@ -155,12 +162,12 @@
 
 #### Tests para User Story 3 (TDD - Escribir primero y verificar fallo)
 
-- [ ] T040 [P] [US3] Escribir pruebas unitarias de anonimización estricta bajo Ley N° 29733 (censura de correos, teléfonos y montos monetarios) en `tests/unit/test_exclusion_report_censorship.py`.
+- [ ] T047 [P] [US3] Escribir pruebas unitarias de anonimización estricta bajo Ley N° 29733 (censura de correos, teléfonos y montos monetarios) en `tests/unit/test_exclusion_report_censorship.py`.
 
 #### Implementación para User Story 3
 
-- [ ] T041 [P] [US3] Implementar el exportador de 5 columnas oficiales en `src/adapters/adecco/exclusion_exporter.py` utilizando `openpyxl`/`pandas` con estilos y anchos de columna corporativos.
-- [ ] T042 [US3] Implementar el servicio de aplicación `ExclusionReportService` en `src/services/exclusion_report_service.py` (compilación de cartera activa y exclusiones temporales <180 días, soporte de filtro por cliente o consolidado, manejo de reporte vacío limpio y registro en `reportes_cartera_exclusiones`).
+- [ ] T048 [P] [US3] Implementar el exportador de 5 columnas oficiales en `src/adapters/adecco/exclusion_exporter.py` utilizando `openpyxl`/`pandas` con estilos y anchos de columna corporativos.
+- [ ] T049 [US3] Implementar el servicio de aplicación `ExclusionReportService` en `src/services/exclusion_report_service.py` (compilación de cartera activa y exclusiones temporales <180 días, soporte de filtro por cliente o consolidado, manejo de reporte vacío limpio y registro en `reportes_cartera_exclusiones`).
 
 **Checkpoint**: Reporte de 5 columnas para Adecco generado a demanda con censura legal verificada.
 
@@ -174,12 +181,13 @@
 
 #### Tests para User Story 4 (TDD - Escribir primero y verificar fallo)
 
-- [ ] T043 [P] [US4] Escribir pruebas unitarias exhaustivas de cálculo CTC Factor 1.56, conversión neto a bruto con tasa 21% y guardas de división por cero en `tests/unit/test_ctc_calculator.py`.
+- [ ] T050 [P] [US4] Ejecutar y validar las pruebas de contrato de esquemas de cálculo financiero CTC en `tests/contract/test_ctc_contracts.py`.
+- [ ] T051 [P] [US4] Escribir pruebas unitarias exhaustivas de cálculo CTC Factor 1.56, conversión neto a bruto con tasa 21% y guardas de división por cero en `tests/unit/test_ctc_calculator.py`.
 
 #### Implementación para User Story 4
 
-- [ ] T044 [P] [US4] Definir el puerto de compensaciones laborales (`CTCPort`) en `src/ports/ctc_port.py`.
-- [ ] T045 [US4] Implementar el servicio de cálculo financiero `CTCCalculatorService` en `src/services/ctc_calculator_service.py` (multiplicador 1.56, conversión neto/bruto, guarda contra presupuesto $\le 0$, semáforo de 3 niveles y advertencia de rangos atípicos).
+- [ ] T052 [P] [US4] Definir el puerto de compensaciones laborales (`CTCPort`) en `src/ports/ctc_port.py`.
+- [ ] T053 [US4] Implementar el servicio de cálculo financiero `CTCCalculatorService` en `src/services/ctc_calculator_service.py` (multiplicador 1.56, conversión neto/bruto, guarda contra presupuesto $\le 0$, semáforo de 3 niveles y advertencia de rangos atípicos).
 
 **Checkpoint**: Todas las historias de usuario de dominio (US6, US1, US2, US5, US3, US4) implementadas y testeadas en capas de Dominio, Puertos, Adaptadores y Servicios.
 
@@ -187,20 +195,20 @@
 
 ## Phase 4: Frontend Streamlit con Branding Oficial TCS
 
-**Purpose**: Presentación visual integrada mediante interfaz web interactiva en Python Streamlit con identidad corporativa de TCS y control de acceso.
+**Purpose**: Presentación visual integrada mediante interfaz web interactiva en Python Streamlit con identidad corporativa de TCS, control de acceso RBAC y Tablero de Métricas del embudo.
 
-- [ ] T046 Implementar el gestor de estado de sesión, autenticación y guardas RBAC en `src/ui/session.py` (persistencia en `st.session_state` de `user_id`, `email`, `rol`, expiración por inactividad a los 30 minutos y verificadores de permisos por rol).
-- [ ] T047 [P] Implementar el tema corporativo TCS en `src/ui/theme.py` inyectando estilos CSS (Deep Navy `#0A192F`, Vibrant Blue `#0076CE`, Cyan Accent `#00B4D8`, Magenta Accent `#E91E63`, semáforos `#2ECC71`, `#F1C40F`, `#E74C3C`, `#9B59B6`), renderizado del logo oficial `assets/tcs_logo.png` y badges de estado.
-- [ ] T048 Implementar la pantalla de Login corporativo en `src/ui/pages/p0_login.py` (formulario de inicio de sesión con correo `@tcs.com`, pestaña de registro institucional con asignación de `Compliance_Officer`, y botones de acceso rápido de 1-clic para roles demo: Head of TA, Senior Recruiter, Coordinator y Compliance Officer).
-- [ ] T049 Implementar la vista de Ficha Única de Candidato en `src/ui/pages/p1_ficha_candidato.py` (formulario reactivo con autollenado por DNI, normalización E.164, botón interactivo de WhatsApp Web, subida de CV con parsing asistido, detección preventiva de duplicados y badge Boomerang).
-- [ ] T050 Implementar la vista de Screening Telefónico HITL en `src/ui/pages/p2_screening_llamada.py` (formulario estructurado de las 7 dimensiones, alerta visual de conmutación geográfica de transporte y registro del dictamen humano con autoría indivisible).
-- [ ] T051 Implementar la vista del Simulador Financiero CTC en `src/ui/pages/p3_simulador_ctc.py` (selectores Bruto/Neto, cálculo reactivo en vivo de Factor 1.56, tarjetas de métricas, semáforo presupuestal y trámite de excepciones salariales).
-- [ ] T052 Implementar la vista del Validador de Planillas de Adecco en `src/ui/pages/p4_validador_adecco.py` (arrastrar y soltar archivo Excel/CSV, tarjetas ejecutivas del semáforo 🔴/🟡/🟢 y 🟣 Boomerang, tabla interactiva con filtros e importación atómica de candidatos limpios).
-- [ ] T053 Implementar la vista de Generación de Reporte de Cartera y Exclusiones en `src/ui/pages/p5_reporte_exclusion.py` (selector de cliente o consolidado general, visualización previa de las 5 columnas censuradas y botón de descarga directa en Excel).
-- [ ] T054 Implementar la vista del Catálogo Alumni TCS en `src/ui/pages/p6_alumni_tcs.py` (búsqueda de ex-colaboradores, consulta de estatus de recontratabilidad y registro de nuevos alumni).
-- [ ] T055 Implementar la Consola Central de Auditoría en vivo en `src/ui/pages/p7_consola_auditoria.py` (tabla interactiva con refresco en vivo, filtros por usuario, entidad, acción y fechas, inspector de diferencias JSON y botón de exportación).
-- [ ] T056 Implementar el Panel de Administración de Usuarios y Roles en `src/ui/pages/p8_gestion_usuarios.py` (restringido a `Head_of_Talent_Acquisition`, listado de operadores, elevación de roles RBAC con justificación obligatoria y desbloqueo de cuentas).
-- [ ] T057 Implementar el punto de entrada principal y enrutador en `src/ui/app.py` y el script lanzador de raíz en `src/app.py` (menú de navegación por pestañas condicionales según el rol RBAC, barra superior con identificación de usuario y botón de cierre de sesión).
+- [ ] T054 [P] Implementar el gestor de estado de sesión, autenticación y guardas RBAC en `src/ui/session.py` (persistencia en `st.session_state` de `user_id`, `email`, `rol`, expiración por inactividad a los 30 minutos, invalidación inmediata al logout y verificadores de permisos por rol).
+- [ ] T055 [P] Implementar el tema corporativo TCS en `src/ui/theme.py` inyectando estilos CSS (Deep Navy `#0A192F`, Vibrant Blue `#0076CE`, Cyan Accent `#00B4D8`, Magenta Accent `#E91E63`, semáforos `#2ECC71`, `#F1C40F`, `#E74C3C`, `#9B59B6`), renderizado del logo oficial `assets/tcs_logo.png` y badges de estado.
+- [ ] T056 Implementar la pantalla de Login corporativo (Opción B) en `src/ui/pages/p0_login.py` (formulario de inicio de sesión con correo `@tcs.com`, pestaña de registro institucional con asignación de `Compliance_Officer`, y botones de acceso rápido de 1-clic para roles demo: Head of TA, Senior Recruiter, Coordinator y Compliance Officer).
+- [ ] T057 Implementar la vista de Ficha Única de Candidato en `src/ui/pages/p1_ficha_candidato.py` (formulario reactivo con autollenado por DNI, normalización E.164, botón interactivo de WhatsApp Web, subida de CV con parsing asistido, detección preventiva de duplicados, badge Boomerang y línea de tiempo histórica de cambios).
+- [ ] T058 Implementar la vista de Screening Telefónico HITL en `src/ui/pages/p2_screening_llamada.py` (formulario estructurado de las 7 dimensiones, alerta visual de conmutación geográfica de transporte y registro del dictamen humano con autoría indivisible).
+- [ ] T059 Implementar la vista del Simulador Financiero CTC en `src/ui/pages/p3_simulador_ctc.py` (selectores Bruto/Neto, cálculo reactivo en vivo de Factor 1.56, tarjetas de métricas, semáforo presupuestal, advertencia de salarios atípicos y trámite de excepciones salariales).
+- [ ] T060 Implementar la vista del Validador de Planillas de Adecco en `src/ui/pages/p4_validador_adecco.py` (arrastrar y soltar archivo Excel/CSV tolerante a alias, tarjetas ejecutivas del semáforo 🔴/🟡/🟢 y 🟣 Boomerang, tabla interactiva con filtros e importación atómica de candidatos limpios con notificación de rollback).
+- [ ] T061 Implementar la vista de Generación de Reporte de Cartera y Exclusiones en `src/ui/pages/p5_reporte_exclusion.py` (selector de cliente o consolidado general, visualización previa de las 5 columnas censuradas bajo Ley 29733 y botón de descarga directa en Excel).
+- [ ] T062 Implementar la vista del Catálogo Alumni TCS en `src/ui/pages/p6_alumni_tcs.py` (búsqueda de ex-colaboradores por DNI/email/fonética, consulta de estatus de recontratabilidad y registro de nuevos alumni).
+- [ ] T063 Implementar la Consola Central de Auditoría en vivo y Tablero de Métricas en `src/ui/pages/p7_consola_auditoria.py` (Pestaña 1: tabla interactiva de auditoría con refresco en vivo, filtros por usuario, entidad, acción y fechas, inspector de diferencias JSON y botón de exportación bajo Ley 29733; Pestaña 2: Tablero de Métricas del embudo con seguimiento de las 17 variables, tasas de conversión y horas de ahorro operativo recuperadas).
+- [ ] T064 Implementar el Panel de Administración de Usuarios y Roles en `src/ui/pages/p8_gestion_usuarios.py` (restringido a `Head_of_Talent_Acquisition`, listado de operadores, elevación de roles RBAC con justificación obligatoria y desbloqueo manual de cuentas).
+- [ ] T065 Implementar el punto de entrada principal y enrutador en `src/ui/app.py` y el script lanzador de raíz en `src/app.py` (menú de navegación por pestañas condicionales según el rol RBAC, barra superior con identificación de usuario y botón de cierre de sesión).
 
 ---
 
@@ -208,10 +216,10 @@
 
 **Purpose**: Suministro de datos de prueba hiper-realistas y lanzador para una experiencia demo impecable sin configuración manual.
 
-- [ ] T058 [P] Generar el archivo de personas sintéticas peruanas calibradas en `data/demo_personas.json` (DNIs válidos de 8 dígitos, fechas de nacimiento, distritos de Lima y perfiles de competencias para precargar en la caché local de DNI).
-- [ ] T059 [P] Generar la planilla de prueba de Adecco calibrada en `data/Adecco_Semana_37.xlsx` con 20 filas estructuradas con alias de columnas (`Móvil`, `DNI / CE`, `Puesto`) conteniendo casos para 🔴 duplicados activos, 🟡 reactivables >180 días, 🟢 inéditos limpios y 🟣 alumni TCS.
-- [ ] T060 [P] Crear el script de carga de datos históricos representativos de `BD GENERAL FY27` en `scripts/seed_historical_data.py` para poblar el pool corporativo con >100 candidatos y casos de prueba del quickstart.
-- [ ] T061 [P] Crear el script lanzador unificado de 1-clic para Windows en `run_demo.bat` (verificación de Python, activación de `.venv`, instalación de dependencias faltantes, ejecución del bootstrap seed y apertura automática de Streamlit en el navegador).
+- [ ] T066 [P] Generar el archivo de personas sintéticas peruanas calibradas en `data/demo_personas.json` (DNIs válidos de 8 dígitos, fechas de nacimiento, distritos de Lima y perfiles de competencias para precargar en la caché local `cache_dni_reniec`).
+- [ ] T067 [P] Generar la planilla de prueba de Adecco calibrada en `data/Adecco_Semana_37.xlsx` con 20 filas estructuradas con alias de columnas (`Móvil`, `DNI / CE`, `Puesto`) conteniendo casos para 🔴 duplicados activos, 🟡 reactivables >180 días, 🟢 inéditos limpios y 🟣 alumni TCS.
+- [ ] T068 [P] Crear el script de carga de datos históricos representativos de `BD GENERAL FY27` en `scripts/seed_historical_data.py` para poblar el pool corporativo con >100 candidatos y casos de prueba del quickstart.
+- [ ] T069 [P] Crear el script lanzador unificado de 1-clic para Windows en `run_demo.bat` (verificación de Python, activación de `.venv`, instalación de dependencias faltantes, ejecución del bootstrap seed y apertura automática de Streamlit en el navegador).
 
 ---
 
@@ -219,10 +227,10 @@
 
 **Purpose**: Verificación formal automatizada del 100% de los flujos del sistema y cumplimiento de criterios de aceptación.
 
-- [ ] T062 [P] Implementar la suite de pruebas de integración del ciclo de vida del candidato en `tests/integration/test_candidate_lifecycle.py` (alta de ficha, validación DNI, normalización E.164, screening de 7 dimensiones, cálculo CTC y auditoría).
-- [ ] T063 [P] Implementar la suite de pruebas de integración de control de acceso y seguridad en `tests/integration/test_rbac_integration.py` (bloqueo de escritura a Compliance Officer, elevación autorizada por Head of TA y auditoría de permisos).
-- [ ] T064 Implementar la suite de validación de los 6 escenarios del quickstart en `tests/integration/test_quickstart_scenarios.py` (verificando secuencialmente Escenarios 1 al 6 de [quickstart.md](quickstart.md)).
-- [ ] T065 Ejecutar la suite completa de pruebas unitarias, de contratos y de integración (`pytest tests/ -v --cov=src`), verificando el paso del 100% de los tests y emitiendo el reporte consolidado de cobertura.
+- [ ] T070 [P] Implementar la suite de pruebas de integración del ciclo de vida del candidato en `tests/integration/test_candidate_lifecycle.py` (alta de ficha, validación DNI, normalización E.164, screening de 7 dimensiones, cálculo CTC, concurrencia optimista y auditoría).
+- [ ] T071 [P] Implementar la suite de pruebas de integración de control de acceso y seguridad en `tests/integration/test_rbac_integration.py` (bloqueo de escritura a Compliance Officer, elevación autorizada por Head of TA, expiración de sesión y auditoría de permisos).
+- [ ] T072 Implementar la suite de validación de los 6 escenarios del quickstart en `tests/integration/test_quickstart_scenarios.py` (verificando secuencialmente Escenarios 1 al 6 de [quickstart.md](quickstart.md)).
+- [ ] T073 Ejecutar la suite completa de pruebas unitarias, de contratos y de integración (`pytest tests/ -v --cov=src`), verificando el paso del 100% de los tests y emitiendo el reporte consolidado de cobertura.
 
 ---
 
@@ -245,7 +253,7 @@
        │
        ├────────────────────────┐
        ▼                        ▼
-[Phase 3.5: US3 Exclusiones]   [Phase 3.4: US4 Simulador CTC]
+[Phase 3.5: US3 Exclusiones]   [Phase 3.6: US4 Simulador CTC]
        │                        │
        └────────────────────────┘
                     │
@@ -270,30 +278,84 @@
 
 ### Parallel Opportunities
 
-- **Phase 1**: `T002`, `T003`, `T004` pueden ejecutarse en paralelo tras `T001`.
-- **Phase 2**: `T005`, `T009`, `T010` pueden ejecutarse en paralelo con la definición de modelos en `T006`.
-- **Phase 3 (TDD Tests)**: Las pruebas `T011`, `T012`, `T019`, `T020`, `T021`, `T031`, `T037`, `T040`, `T043` pueden redactarse en paralelo.
-- **Phase 3 (Servicios y Adaptadores)**: Los adaptadores `T014`, `T015`, `T023`, `T024`, `T025`, `T033`, `T035`, `T038`, `T041` son independientes a nivel de archivo.
-- **Phase 4**: `T047` (CSS y Branding) puede construirse en paralelo con las páginas de UI.
-- **Phase 5**: `T058`, `T059`, `T060`, `T061` pueden desarrollarse en paralelo.
+- **Phase 1**: `T002`, `T003`, `T004`, `T005` pueden ejecutarse en paralelo tras `T001`.
+- **Phase 2**: `T006`, `T010`, `T011`, `T012`, `T013` pueden ejecutarse en paralelo con la definición de modelos en `T007`.
+- **Phase 3 (TDD Tests)**: Las pruebas `T014`, `T015`, `T016`, `T023`, `T024`, `T025`, `T026`, `T036`, `T037`, `T038`, `T043`, `T047`, `T050`, `T051` pueden redactarse en paralelo.
+- **Phase 3 (Servicios y Adaptadores)**: Los adaptadores `T017`, `T018`, `T019`, `T020`, `T027`, `T028`, `T029`, `T030`, `T031`, `T032`, `T033`, `T039`, `T040`, `T041`, `T044`, `T045`, `T048`, `T052` son independientes a nivel de archivo.
+- **Phase 4**: `T054` (Sesión) y `T055` (CSS y Branding) pueden construirse en paralelo con las páginas de UI.
+- **Phase 5**: `T066`, `T067`, `T068`, `T069` pueden desarrollarse en paralelo.
+- **Phase 6**: `T070` y `T071` pueden ejecutarse en paralelo antes de la validación integral de `T072` y `T073`.
 
 ---
 
-## Parallel Example: User Story 1 (Ficha Única MVP)
+## Parallel Execution Examples per Story
 
+### Parallel Example: User Story 6 (Auth & Audit)
 ```bash
-# Redactar pruebas unitarias en paralelo:
-Task T019: "tests/unit/test_e164_normalizer.py"
-Task T020: "tests/unit/test_age_calculator.py"
-Task T021: "tests/unit/test_cv_heuristic_parser.py"
+# Lanzar tests de US6 en paralelo:
+Task T014: "tests/contract/test_auth_audit_contracts.py"
+Task T015: "tests/unit/test_rbac_security.py"
+Task T016: "tests/integration/test_audit_immutability.py"
 
-# Implementar adaptadores y puertos en paralelo:
-Task T022: "src/ports/dni_port.py" y "src/ports/cv_parser_port.py"
-Task T023: "src/adapters/identity/apisperu_adapter.py"
-Task T024: "src/adapters/cv_parser/heuristic_extractor.py"
-Task T025: "src/adapters/cv_parser/langchain_extractor.py"
-Task T026: "src/adapters/persistence/repositories/candidato_repository.py"
-Task T027: "src/adapters/persistence/repositories/postulacion_repository.py"
+# Implementar puertos y adaptadores de US6 en paralelo:
+Task T017: "src/ports/auth_port.py" y "src/ports/audit_port.py"
+Task T018: "src/adapters/security/password_hasher.py"
+Task T019: "src/adapters/persistence/repositories/user_repository.py"
+Task T020: "src/adapters/persistence/repositories/audit_repository.py"
+```
+
+### Parallel Example: User Story 1 (Ficha Única MVP)
+```bash
+# Lanzar tests de US1 en paralelo:
+Task T023: "tests/contract/test_dni_contracts.py" y "tests/contract/test_cv_contracts.py"
+Task T024: "tests/unit/test_e164_normalizer.py"
+Task T025: "tests/unit/test_age_calculator.py"
+Task T026: "tests/unit/test_cv_heuristic_parser.py"
+
+# Implementar puertos y adaptadores de US1 en paralelo:
+Task T027: "src/ports/dni_port.py" y "src/ports/cv_parser_port.py"
+Task T028: "src/adapters/identity/apisperu_adapter.py"
+Task T029: "src/adapters/cv_parser/heuristic_extractor.py"
+Task T030: "src/adapters/cv_parser/langchain_extractor.py"
+Task T031: "src/adapters/persistence/repositories/candidato_repository.py"
+Task T032: "src/adapters/persistence/repositories/postulacion_repository.py"
+Task T033: "src/services/commute_matrix.py"
+```
+
+### Parallel Example: User Story 2 (Validador Adecco)
+```bash
+# Lanzar tests de US2 en paralelo:
+Task T036: "tests/contract/test_adecco_contracts.py"
+Task T037: "tests/unit/test_deduplication.py"
+Task T038: "tests/integration/test_adecco_batch_import.py"
+
+# Implementar componentes de US2 en paralelo:
+Task T039: "src/ports/adecco_port.py"
+Task T040: "src/services/deduplication_service.py"
+Task T041: "src/adapters/adecco/excel_validator.py"
+```
+
+### Parallel Example: User Story 5 (Boomerang Alumni)
+```bash
+# Lanzar tests e implementación de US5 en paralelo:
+Task T043: "tests/unit/test_boomerang_detection.py"
+Task T044: "src/ports/alumni_port.py"
+Task T045: "src/adapters/persistence/repositories/alumni_repository.py"
+```
+
+### Parallel Example: User Story 3 (Reporte Exclusiones Ley 29733)
+```bash
+# Lanzar tests y adaptadores de US3 en paralelo:
+Task T047: "tests/unit/test_exclusion_report_censorship.py"
+Task T048: "src/adapters/adecco/exclusion_exporter.py"
+```
+
+### Parallel Example: User Story 4 (Simulador Financiero CTC)
+```bash
+# Lanzar tests y componentes de US4 en paralelo:
+Task T050: "tests/contract/test_ctc_contracts.py"
+Task T051: "tests/unit/test_ctc_calculator.py"
+Task T052: "src/ports/ctc_port.py"
 ```
 
 ---
@@ -313,86 +375,185 @@ Task T027: "src/adapters/persistence/repositories/postulacion_repository.py"
 1. **Incremento 1 (MVP)**: Ficha Única + DNI + WhatsApp + CV Parsing + Screening Humano (US1 + US6).
 2. **Incremento 2 (Proveedores)**: Validador Masivo de Adecco con semáforo 🔴/🟡/🟢 + Detección Boomerang (US2 + US5). Erradica 5 horas semanales adicionales (Proceso 3).
 3. **Incremento 3 (Regulación & Finanzas)**: Reporte oficial de 5 columnas bajo Ley 29733 (US3) + Simulador CTC 1.56 sin `#DIV/0!` (US4). Erradica fricciones salariales y riesgos legales.
-4. **Incremento 4 (Consolidación Demo)**: Consola de auditoría, panel administrativo de roles, datasets de prueba y script `run_demo.bat`.
+4. **Incremento 4 (Consolidación UI & Demo)**: Consola de auditoría, Tablero de Métricas, panel administrativo de roles, datasets de prueba y script `run_demo.bat`.
 
 ---
 
 ## Traceability & Requirements Mapping Table
 
-| ID Tarea | Fase / Story | Componente Afectado | Ruta de Archivo | Requisito Cubierto |
-|:---------|:-------------|:-------------------|:----------------|:-------------------|
-| `T001` | Phase 1: Setup | Project Layout | `src/` | Estructura Hexagonal |
-| `T002` | Phase 1: Setup | Dependencies | `requirements.txt` | Python 3.12 stack |
-| `T003` | Phase 1: Setup | Configuration | `src/config.py`, `.env.example` | Variables de entorno |
-| `T004` | Phase 1: Setup | Logging | `src/logger.py` | Logger estructurado |
-| `T005` | Phase 2: DB | Persistence Engine | `src/adapters/persistence/database.py` | SQLite WAL / Postgres |
-| `T006` | Phase 2: DB | ORM Entities | `src/adapters/persistence/models.py` | 10 tablas relacionales |
-| `T007` | Phase 2: DB | Immutability DDL | `src/adapters/persistence/ddl.py` | Triggers append-only |
-| `T008` | Phase 2: DB | Bootstrap Seeder | `src/adapters/persistence/seed.py` | Admin bootstrap |
-| `T009` | Phase 2: DB | Domain Exceptions | `src/domain/exceptions.py` | Excepciones de negocio |
-| `T010` | Phase 2: DB | Value Objects | `src/domain/value_objects.py` | Objetos de valor |
-| `T011` | Phase 3.1: US6 | Security Unit Tests | `tests/unit/test_rbac_security.py` | Pruebas RBAC TDD |
-| `T012` | Phase 3.1: US6 | Audit Integration Tests | `tests/integration/test_audit_immutability.py` | Pruebas Auditoría TDD |
-| `T013` | Phase 3.1: US6 | Ports | `src/ports/auth_port.py`, `src/ports/audit_port.py` | Puertos Auth y Audit |
-| `T014` | Phase 3.1: US6 | Cryptography | `src/adapters/security/password_hasher.py` | Hashing Bcrypt |
-| `T015` | Phase 3.1: US6 | User Repository | `src/adapters/persistence/repositories/user_repository.py` | Gestión de usuarios |
-| `T016` | Phase 3.1: US6 | Audit Repository | `src/adapters/persistence/repositories/audit_repository.py` | Repositorio append-only |
-| `T017` | Phase 3.1: US6 | Auth Service | `src/services/auth_service.py` | RBAC y bloqueo cuentas |
-| `T018` | Phase 3.1: US6 | Audit Service | `src/services/audit_service.py` | Trazabilidad integral |
-| `T019` | Phase 3.2: US1 | E.164 Tests | `tests/unit/test_e164_normalizer.py` | Pruebas E.164 TDD |
-| `T020` | Phase 3.2: US1 | Age Tests | `tests/unit/test_age_calculator.py` | Pruebas Edad TDD |
-| `T021` | Phase 3.2: US1 | CV Parser Tests | `tests/unit/test_cv_heuristic_parser.py` | Pruebas Parser TDD |
-| `T022` | Phase 3.2: US1 | Ports | `src/ports/dni_port.py`, `src/ports/cv_parser_port.py` | Puertos DNI y CV |
-| `T023` | Phase 3.2: US1 | Identity Adapter | `src/adapters/identity/apisperu_adapter.py` | APIsPERU y Caché |
-| `T024` | Phase 3.2: US1 | Heuristic Extractor | `src/adapters/cv_parser/heuristic_extractor.py` | Fallback offline pypdf |
-| `T025` | Phase 3.2: US1 | LangChain Extractor | `src/adapters/cv_parser/langchain_extractor.py` | Gemini / Grok Parser |
-| `T026` | Phase 3.2: US1 | Candidate Repo | `src/adapters/persistence/repositories/candidato_repository.py` | Persistencia Candidatos |
-| `T027` | Phase 3.2: US1 | Process Repo | `src/adapters/persistence/repositories/postulacion_repository.py` | Persistencia Procesos |
-| `T028` | Phase 3.2: US1 | Commute Domain | `src/services/commute_matrix.py` | Alerta Geográfica |
-| `T029` | Phase 3.2: US1 | Candidate Service | `src/services/candidate_service.py` | Ficha Única |
-| `T030` | Phase 3.2: US1 | Screening Service | `src/services/screening_service.py` | Screening 7D HITL |
-| `T031` | Phase 3.3: US2 | Deduplication Tests | `tests/unit/test_deduplication.py` | Pruebas Fonéticas TDD |
-| `T032` | Phase 3.3: US2 | Batch Import Tests | `tests/integration/test_adecco_batch_import.py` | Pruebas Ingesta TDD |
-| `T033` | Phase 3.3: US2 | Deduplication Service | `src/services/deduplication_service.py` | Cotejo fonético |
-| `T034` | Phase 3.3: US2 | Adecco Port | `src/ports/adecco_port.py` | Puerto Proveedores |
-| `T035` | Phase 3.3: US2 | Excel Ingestor | `src/adapters/adecco/excel_validator.py` | Mapeo de alias Excel |
-| `T036` | Phase 3.3: US2 | Adecco Service | `src/services/adecco_service.py` | Semáforo 🔴/🟡/🟢 |
-| `T037` | Phase 3.4: US5 | Boomerang Tests | `tests/unit/test_boomerang_detection.py` | Pruebas Alumni TDD |
-| `T038` | Phase 3.4: US5 | Alumni Repo | `src/adapters/persistence/repositories/alumni_repository.py` | Persistencia Alumni |
-| `T039` | Phase 3.4: US5 | Alumni Service | `src/services/alumni_service.py` | Detección Boomerang |
-| `T040` | Phase 3.5: US3 | Censorship Tests | `tests/unit/test_exclusion_report_censorship.py` | Pruebas Ley 29733 TDD |
-| `T041` | Phase 3.5: US3 | Exclusion Exporter | `src/adapters/adecco/exclusion_exporter.py` | Excel 5 columnas |
-| `T042` | Phase 3.5: US3 | Exclusion Service | `src/services/exclusion_report_service.py` | Reporte a demanda |
-| `T043` | Phase 3.6: US4 | CTC Calculator Tests | `tests/unit/test_ctc_calculator.py` | Pruebas CTC TDD |
-| `T044` | Phase 3.6: US4 | CTC Port | `src/ports/ctc_port.py` | Puerto Compensaciones |
-| `T045` | Phase 3.6: US4 | CTC Service | `src/services/ctc_calculator_service.py` | Factor 1.56 y guardas |
-| `T046` | Phase 4: UI | Session Manager | `src/ui/session.py` | Sesión y RBAC UI |
-| `T047` | Phase 4: UI | Theme & Styling | `src/ui/theme.py` | TCS CSS e identidad |
-| `T048` | Phase 4: UI | Login View | `src/ui/pages/p0_login.py` | Login y 1-clic demo |
-| `T049` | Phase 4: UI | Ficha Candidato View | `src/ui/pages/p1_ficha_candidato.py` | Ficha Única UI |
-| `T050` | Phase 4: UI | Screening View | `src/ui/pages/p2_screening_llamada.py` | Screening 7D UI |
-| `T051` | Phase 4: UI | CTC Simulator View | `src/ui/pages/p3_simulador_ctc.py` | Simulador CTC UI |
-| `T052` | Phase 4: UI | Adecco View | `src/ui/pages/p4_validador_adecco.py` | Validador Adecco UI |
-| `T053` | Phase 4: UI | Exclusions View | `src/ui/pages/p5_reporte_exclusion.py` | Reporte Exclusiones UI |
-| `T054` | Phase 4: UI | Alumni View | `src/ui/pages/p6_alumni_tcs.py` | Catálogo Alumni UI |
-| `T055` | Phase 4: UI | Audit Console View | `src/ui/pages/p7_consola_auditoria.py` | Consola Auditoría UI |
-| `T056` | Phase 4: UI | User Management View | `src/ui/pages/p8_gestion_usuarios.py` | Gestión de Usuarios UI |
-| `T057` | Phase 4: UI | Main App Router | `src/ui/app.py`, `src/app.py` | Navegación Streamlit |
-| `T058` | Phase 5: Demo | Seed Personas | `data/demo_personas.json` | Dataset DNI local |
-| `T059` | Phase 5: Demo | Seed Adecco Excel | `data/Adecco_Semana_37.xlsx` | Planilla calibrada |
-| `T060` | Phase 5: Demo | Historical Seeder | `scripts/seed_historical_data.py` | Poblado inicial BD |
-| `T061` | Phase 5: Demo | Unified Launcher | `run_demo.bat` | Script 1-clic demo |
-| `T062` | Phase 6: E2E | Lifecycle Integration | `tests/integration/test_candidate_lifecycle.py` | Test integración Ficha |
-| `T063` | Phase 6: E2E | RBAC Integration | `tests/integration/test_rbac_integration.py` | Test integración RBAC |
-| `T064` | Phase 6: E2E | Quickstart Validation | `tests/integration/test_quickstart_scenarios.py` | Test 6 escenarios |
-| `T065` | Phase 6: E2E | Full Test Suite | `tests/` | Cobertura total pytest |
+| ID Tarea | Fase / Story | Componente Afectado | Ruta de Archivo | Requisitos Funcionales Cubiertos | Criterios de Éxito Cubiertos |
+|:---------|:-------------|:-------------------|:----------------|:---------------------------------|:-----------------------------|
+| `T001` | Phase 1: Setup | Project Layout | `src/` | `FR-035` | `SC-001`, `SC-008` |
+| `T002` | Phase 1: Setup | Dependencies | `requirements.txt` | `FR-035` | `SC-001`, `SC-004` |
+| `T003` | Phase 1: Setup | Configuration | `src/config.py`, `.env.example` | `FR-002`, `FR-038` | `SC-001`, `SC-009` |
+| `T004` | Phase 1: Setup | Logging | `src/logger.py` | `FR-042` | `SC-008` |
+| `T005` | Phase 1: Setup | Test Fixtures | `tests/conftest.py` | `FR-042`, `FR-043` | `SC-008`, `SC-010` |
+| `T006` | Phase 2: DB | Persistence Engine | `src/adapters/persistence/database.py` | `FR-001`, `FR-048` | `SC-003`, `SC-010` |
+| `T007` | Phase 2: DB | ORM Entities | `src/adapters/persistence/models.py` | `FR-001`, `FR-007`, `FR-047` | `SC-003`, `SC-010` |
+| `T008` | Phase 2: DB | Immutability DDL | `src/adapters/persistence/ddl.py` | `FR-043` | `SC-008` |
+| `T009` | Phase 2: DB | Bootstrap Seeder | `src/adapters/persistence/seed.py` | `FR-037`, `FR-039` | `SC-009` |
+| `T010` | Phase 2: DB | Pure Domain Entities | `src/domain/entities.py` | `FR-001`, `FR-004`, `FR-047` | `SC-003`, `SC-004` |
+| `T011` | Phase 2: DB | Domain Exceptions | `src/domain/exceptions.py` | `FR-007`, `FR-047`, `FR-048` | `SC-009`, `SC-010` |
+| `T012` | Phase 2: DB | Value Objects | `src/domain/value_objects.py` | `FR-005`, `FR-024`, `FR-026` | `SC-004` |
+| `T013` | Phase 2: DB | DDL Contract Tests | `tests/contract/test_database_ddl.py` | `FR-001`, `FR-043`, `FR-047` | `SC-008`, `SC-010` |
+| `T014` | Phase 3.1: US6 | Auth Contracts | `tests/contract/test_auth_audit_contracts.py` | `FR-037`, `FR-038`, `FR-039` | `SC-009` |
+| `T015` | Phase 3.1: US6 | Security Unit Tests | `tests/unit/test_rbac_security.py` | `FR-037`, `FR-038`, `FR-045` | `SC-009` |
+| `T016` | Phase 3.1: US6 | Audit Integration Tests | `tests/integration/test_audit_immutability.py` | `FR-042`, `FR-043` | `SC-008` |
+| `T017` | Phase 3.1: US6 | Auth & Audit Ports | `src/ports/auth_port.py`, `src/ports/audit_port.py` | `FR-037`, `FR-042` | `SC-008`, `SC-009` |
+| `T018` | Phase 3.1: US6 | Cryptography | `src/adapters/security/password_hasher.py` | `FR-038` | `SC-009` |
+| `T019` | Phase 3.1: US6 | User Repository | `src/adapters/persistence/repositories/user_repository.py` | `FR-037`, `FR-039`, `FR-045` | `SC-009` |
+| `T020` | Phase 3.1: US6 | Audit Repository | `src/adapters/persistence/repositories/audit_repository.py` | `FR-042`, `FR-043` | `SC-008` |
+| `T021` | Phase 3.1: US6 | Auth Service | `src/services/auth_service.py` | `FR-037`, `FR-038`, `FR-039`, `FR-045` | `SC-009` |
+| `T022` | Phase 3.1: US6 | Audit Service | `src/services/audit_service.py` | `FR-041`, `FR-042`, `FR-045` | `SC-008` |
+| `T023` | Phase 3.2: US1 | DNI & CV Contracts | `tests/contract/test_dni_contracts.py`, `tests/contract/test_cv_contracts.py` | `FR-002`, `FR-009`, `FR-010`, `FR-036` | `SC-001` |
+| `T024` | Phase 3.2: US1 | E.164 Tests | `tests/unit/test_e164_normalizer.py` | `FR-005`, `FR-006` | `SC-001`, `SC-004` |
+| `T025` | Phase 3.2: US1 | Age Tests | `tests/unit/test_age_calculator.py` | `FR-004` | `SC-001`, `SC-004` |
+| `T026` | Phase 3.2: US1 | CV Parser Tests | `tests/unit/test_cv_heuristic_parser.py` | `FR-010`, `FR-036` | `SC-001` |
+| `T027` | Phase 3.2: US1 | DNI & CV Ports | `src/ports/dni_port.py`, `src/ports/cv_parser_port.py` | `FR-002`, `FR-009`, `FR-010` | `SC-001` |
+| `T028` | Phase 3.2: US1 | Identity Adapter | `src/adapters/identity/apisperu_adapter.py` | `FR-002`, `FR-003` | `SC-001` |
+| `T029` | Phase 3.2: US1 | Heuristic Extractor | `src/adapters/cv_parser/heuristic_extractor.py` | `FR-010`, `FR-036` | `SC-001` |
+| `T030` | Phase 3.2: US1 | LangChain Extractor | `src/adapters/cv_parser/langchain_extractor.py` | `FR-010`, `FR-036` | `SC-001` |
+| `T031` | Phase 3.2: US1 | Candidate Repo | `src/adapters/persistence/repositories/candidato_repository.py` | `FR-001`, `FR-007`, `FR-047` | `SC-001`, `SC-010` |
+| `T032` | Phase 3.2: US1 | Process Repo | `src/adapters/persistence/repositories/postulacion_repository.py` | `FR-011`, `FR-041`, `FR-047` | `SC-003`, `SC-010` |
+| `T033` | Phase 3.2: US1 | Commute Domain | `src/services/commute_matrix.py` | `FR-011` | `SC-001` |
+| `T034` | Phase 3.2: US1 | Candidate Service | `src/services/candidate_service.py` | `FR-001`, `FR-002`, `FR-003`, `FR-004`, `FR-005`, `FR-006`, `FR-007`, `FR-008`, `FR-041`, `FR-047` | `SC-001`, `SC-004`, `SC-008`, `SC-010` |
+| `T035` | Phase 3.2: US1 | Screening Service | `src/services/screening_service.py` | `FR-011`, `FR-033`, `FR-034`, `FR-041` | `SC-001`, `SC-003`, `SC-008` |
+| `T036` | Phase 3.3: US2 | Adecco Contracts | `tests/contract/test_adecco_contracts.py` | `FR-012`, `FR-013`, `FR-015` | `SC-002` |
+| `T037` | Phase 3.3: US2 | Deduplication Tests | `tests/unit/test_deduplication.py` | `FR-016` | `SC-002` |
+| `T038` | Phase 3.3: US2 | Batch Import Tests | `tests/integration/test_adecco_batch_import.py` | `FR-012`, `FR-019`, `FR-048` | `SC-002`, `SC-010` |
+| `T039` | Phase 3.3: US2 | Adecco Port | `src/ports/adecco_port.py` | `FR-012`, `FR-013` | `SC-002` |
+| `T040` | Phase 3.3: US2 | Deduplication Service | `src/services/deduplication_service.py` | `FR-014`, `FR-015`, `FR-016` | `SC-002` |
+| `T041` | Phase 3.3: US2 | Excel Ingestor | `src/adapters/adecco/excel_validator.py` | `FR-012`, `FR-013`, `FR-048` | `SC-002`, `SC-010` |
+| `T042` | Phase 3.3: US2 | Adecco Service | `src/services/adecco_service.py` | `FR-014`, `FR-015`, `FR-018`, `FR-019`, `FR-041`, `FR-048` | `SC-002`, `SC-008`, `SC-010` |
+| `T043` | Phase 3.4: US5 | Boomerang Tests | `tests/unit/test_boomerang_detection.py` | `FR-030` | `SC-007` |
+| `T044` | Phase 3.4: US5 | Alumni Port | `src/ports/alumni_port.py` | `FR-030` | `SC-007` |
+| `T045` | Phase 3.4: US5 | Alumni Repo | `src/adapters/persistence/repositories/alumni_repository.py` | `FR-030` | `SC-007` |
+| `T046` | Phase 3.4: US5 | Alumni Service | `src/services/alumni_service.py` | `FR-017`, `FR-030`, `FR-031`, `FR-032` | `SC-002`, `SC-007` |
+| `T047` | Phase 3.5: US3 | Censorship Tests | `tests/unit/test_exclusion_report_censorship.py` | `FR-021`, `FR-022` | `SC-005`, `SC-006` |
+| `T048` | Phase 3.5: US3 | Exclusion Exporter | `src/adapters/adecco/exclusion_exporter.py` | `FR-021`, `FR-022` | `SC-005`, `SC-006` |
+| `T049` | Phase 3.5: US3 | Exclusion Service | `src/services/exclusion_report_service.py` | `FR-020`, `FR-021`, `FR-022`, `FR-023`, `FR-041` | `SC-005`, `SC-006`, `SC-008` |
+| `T050` | Phase 3.6: US4 | CTC Contracts | `tests/contract/test_ctc_contracts.py` | `FR-024`, `FR-025`, `FR-026`, `FR-027`, `FR-028`, `FR-029` | `SC-004` |
+| `T051` | Phase 3.6: US4 | CTC Unit Tests | `tests/unit/test_ctc_calculator.py` | `FR-024`, `FR-025`, `FR-026`, `FR-027` | `SC-004` |
+| `T052` | Phase 3.6: US4 | CTC Port | `src/ports/ctc_port.py` | `FR-024`, `FR-026` | `SC-004` |
+| `T053` | Phase 3.6: US4 | CTC Service | `src/services/ctc_calculator_service.py` | `FR-024`, `FR-025`, `FR-026`, `FR-027`, `FR-028`, `FR-029`, `FR-041` | `SC-004`, `SC-008` |
+| `T054` | Phase 4: UI | Session Manager | `src/ui/session.py` | `FR-038`, `FR-039`, `FR-040` | `SC-009` |
+| `T055` | Phase 4: UI | Theme & Styling | `src/ui/theme.py` | `FR-001` | `SC-001` |
+| `T056` | Phase 4: UI | Login View | `src/ui/pages/p0_login.py` | `FR-037`, `FR-038`, `FR-039`, `FR-045` | `SC-009` |
+| `T057` | Phase 4: UI | Ficha Candidato View | `src/ui/pages/p1_ficha_candidato.py` | `FR-001`, `FR-002`, `FR-003`, `FR-004`, `FR-005`, `FR-006`, `FR-007`, `FR-008`, `FR-009`, `FR-010`, `FR-031`, `FR-044` | `SC-001`, `SC-004`, `SC-007`, `SC-008` |
+| `T058` | Phase 4: UI | Screening View | `src/ui/pages/p2_screening_llamada.py` | `FR-011`, `FR-033`, `FR-034` | `SC-001`, `SC-003`, `SC-008` |
+| `T059` | Phase 4: UI | CTC Simulator View | `src/ui/pages/p3_simulador_ctc.py` | `FR-024`, `FR-025`, `FR-026`, `FR-027`, `FR-028`, `FR-029` | `SC-004` |
+| `T060` | Phase 4: UI | Adecco View | `src/ui/pages/p4_validador_adecco.py` | `FR-012`, `FR-013`, `FR-015`, `FR-017`, `FR-018`, `FR-019`, `FR-048` | `SC-002`, `SC-007`, `SC-010` |
+| `T061` | Phase 4: UI | Exclusions View | `src/ui/pages/p5_reporte_exclusion.py` | `FR-020`, `FR-021`, `FR-022`, `FR-023` | `SC-005`, `SC-006`, `SC-008` |
+| `T062` | Phase 4: UI | Alumni View | `src/ui/pages/p6_alumni_tcs.py` | `FR-030`, `FR-031`, `FR-032` | `SC-007` |
+| `T063` | Phase 4: UI | Audit & Metrics View | `src/ui/pages/p7_consola_auditoria.py` | `FR-039`, `FR-042`, `FR-045`, `FR-046` | `SC-002`, `SC-003`, `SC-008` |
+| `T064` | Phase 4: UI | User Management View | `src/ui/pages/p8_gestion_usuarios.py` | `FR-037`, `FR-039`, `FR-041`, `FR-045` | `SC-009` |
+| `T065` | Phase 4: UI | Main App Router | `src/ui/app.py`, `src/app.py` | `FR-038`, `FR-039`, `FR-040` | `SC-009` |
+| `T066` | Phase 5: Demo | Seed Personas | `data/demo_personas.json` | `FR-002`, `FR-003` | `SC-001` |
+| `T067` | Phase 5: Demo | Seed Adecco Excel | `data/Adecco_Semana_37.xlsx` | `FR-012`, `FR-013`, `FR-015`, `FR-017` | `SC-002`, `SC-007` |
+| `T068` | Phase 5: Demo | Historical Seeder | `scripts/seed_historical_data.py` | `FR-001`, `FR-030` | `SC-001`, `SC-003`, `SC-007` |
+| `T069` | Phase 5: Demo | Unified Launcher | `run_demo.bat` | `FR-001`, `FR-038` | `SC-001`, `SC-009` |
+| `T070` | Phase 6: E2E | Lifecycle Integration | `tests/integration/test_candidate_lifecycle.py` | `FR-001`, `FR-002`, `FR-004`, `FR-005`, `FR-011`, `FR-024`, `FR-041`, `FR-047` | `SC-001`, `SC-003`, `SC-004`, `SC-008`, `SC-010` |
+| `T071` | Phase 6: E2E | RBAC Integration | `tests/integration/test_rbac_integration.py` | `FR-037`, `FR-038`, `FR-039`, `FR-040`, `FR-042`, `FR-045` | `SC-008`, `SC-009` |
+| `T072` | Phase 6: E2E | Quickstart Validation | `tests/integration/test_quickstart_scenarios.py` | `FR-001` a `FR-048` | `SC-001` a `SC-010` |
+| `T073` | Phase 6: E2E | Full Coverage Suite | `tests/` | `FR-001` a `FR-048` | `SC-001` a `SC-010` |
+
+---
+
+## Functional Requirements Coverage (FR-001 to FR-048)
+
+| Requisito Funcional | Descripción Resumida | Tareas Asignadas | Estado de Cobertura |
+|:--------------------|:---------------------|:-----------------|:-------------------:|
+| `FR-001` | Formulario Ficha Única que consolida 28 atributos y elimina 11 pestañas | `T006`, `T007`, `T010`, `T013`, `T031`, `T034`, `T055`, `T057`, `T068`, `T069`, `T070`, `T072`, `T073` | **100% CUBIERTO** |
+| `FR-002` | Autollenado DNI (caché local SQLite primero, APIsPERU segundo) | `T003`, `T023`, `T027`, `T028`, `T034`, `T057`, `T066`, `T070`, `T072`, `T073` | **100% CUBIERTO** |
+| `FR-003` | Captura asistida offline, marca `Pendiente_Regularizacion` y sincronización asíncrona | `T028`, `T034`, `T057`, `T066`, `T072`, `T073` | **100% CUBIERTO** |
+| `FR-004` | Cálculo dinámico de edad en runtime/consulta sin error de 127 años | `T010`, `T025`, `T034`, `T057`, `T070`, `T072`, `T073` | **100% CUBIERTO** |
+| `FR-005` | Normalización telefónica canónica internacional E.164 (`+519XXXXXXXX`) | `T012`, `T024`, `T034`, `T057`, `T070`, `T072`, `T073` | **100% CUBIERTO** |
+| `FR-006` | Control interactivo 1-clic a WhatsApp Web con mensaje protocolar | `T024`, `T034`, `T057`, `T072`, `T073` | **100% CUBIERTO** |
+| `FR-007` | Verificación en tiempo real de unicidad por DNI, teléfono E.164 y email | `T007`, `T011`, `T031`, `T034`, `T057`, `T072`, `T073` | **100% CUBIERTO** |
+| `FR-008` | Bloqueo de duplicados huérfanos y redirección a ficha histórica | `T034`, `T057`, `T072`, `T073` | **100% CUBIERTO** |
+| `FR-009` | Carga documental de currículos en formatos PDF y Word (DOCX) | `T023`, `T027`, `T057`, `T072`, `T073` | **100% CUBIERTO** |
+| `FR-010` | Extracción estructurada asistida de competencias e idiomas sin sesgos | `T023`, `T026`, `T027`, `T029`, `T030`, `T057`, `T072`, `T073` | **100% CUBIERTO** |
+| `FR-011` | Registro de las 7 dimensiones humanas de la llamada y alerta geográfica | `T032`, `T033`, `T035`, `T058`, `T070`, `T072`, `T073` | **100% CUBIERTO** |
+| `FR-012` | Carga masiva de planillas electrónicas de Adecco (.xlsx / .csv) | `T036`, `T038`, `T039`, `T041`, `T042`, `T060`, `T067`, `T072`, `T073` | **100% CUBIERTO** |
+| `FR-013` | Tolerancia a encabezados con alias, celdas combinadas y filas en blanco | `T036`, `T039`, `T041`, `T060`, `T067`, `T072`, `T073` | **100% CUBIERTO** |
+| `FR-014` | Procesamiento algorítmico <100ms por fila contra historial TCS | `T040`, `T042`, `T072`, `T073` | **100% CUBIERTO** |
+| `FR-015` | Semáforo algorítmico: 🔴 Rojo (activo/<180d), 🟡 Amarillo (>180d), 🟢 Verde | `T036`, `T040`, `T042`, `T060`, `T067`, `T072`, `T073` | **100% CUBIERTO** |
+| `FR-016` | Deduplicación exacta + fonética Double Metaphone y Token Sort $\ge 85\%$ | `T037`, `T040`, `T072`, `T073` | **100% CUBIERTO** |
+| `FR-017` | Insignia 🟣 púrpura de ex-colaborador TCS para bloqueo de comisión | `T046`, `T060`, `T067`, `T072`, `T073` | **100% CUBIERTO** |
+| `FR-018` | Resumen ejecutivo del lote: total, duplicados, reactivables, limpios, alumni | `T042`, `T060`, `T072`, `T073` | **100% CUBIERTO** |
+| `FR-019` | Descarga de shortlist limpio e importación en lote de candidatos verdes | `T038`, `T042`, `T060`, `T072`, `T073` | **100% CUBIERTO** |
+| `FR-020` | Generador a demanda de reporte de cartera y exclusiones en 1-clic | `T049`, `T061`, `T072`, `T073` | **100% CUBIERTO** |
+| `FR-021` | Estructura uniforme oficial de exactamente 5 columnas de exclusión | `T047`, `T048`, `T049`, `T061`, `T072`, `T073` | **100% CUBIERTO** |
+| `FR-022` | Censura absoluta de datos sensibles bajo Ley N° 29733 | `T047`, `T048`, `T049`, `T061`, `T072`, `T073` | **100% CUBIERTO** |
+| `FR-023` | Registro inmutable de cada exportación (usuario, fecha, total filas) | `T049`, `T061`, `T072`, `T073` | **100% CUBIERTO** |
+| `FR-024` | Cálculo automático de CTC Factor 1.56 bajo régimen D.L. 728 | `T012`, `T050`, `T051`, `T052`, `T053`, `T059`, `T070`, `T072`, `T073` | **100% CUBIERTO** |
+| `FR-025` | Conversión asistida de pretensión Neta a Bruta proyectada (/ 0.79) | `T050`, `T051`, `T053`, `T059`, `T072`, `T073` | **100% CUBIERTO** |
+| `FR-026` | Cálculo dinámico de variación presupuestal porcentual | `T012`, `T050`, `T051`, `T052`, `T053`, `T059`, `T072`, `T073` | **100% CUBIERTO** |
+| `FR-027` | Guarda lógica estricta contra error de división por cero `#DIV/0!` | `T050`, `T051`, `T053`, `T059`, `T072`, `T073` | **100% CUBIERTO** |
+| `FR-028` | Semáforo visual financiero de 3 estados (Dentro, Requiere Aprobación, Fuera) | `T050`, `T053`, `T059`, `T072`, `T073` | **100% CUBIERTO** |
+| `FR-029` | Advertencias ante montos salariales atípicos (< S/. 1,025 o > S/. 35,000) | `T050`, `T053`, `T059`, `T072`, `T073` | **100% CUBIERTO** |
+| `FR-030` | Cotejo automático contra catálogo Alumni TCS por DNI, correo y fonética | `T043`, `T044`, `T045`, `T046`, `T062`, `T068`, `T072`, `T073` | **100% CUBIERTO** |
+| `FR-031` | Alerta visual en ficha indicando antecedente Boomerang y recontratabilidad | `T046`, `T057`, `T062`, `T072`, `T073` | **100% CUBIERTO** |
+| `FR-032` | Advertencia preventiva de compliance ante estatus `Do_Not_Rehire` | `T046`, `T057`, `T062`, `T072`, `T073` | **100% CUBIERTO** |
+| `FR-033` | Principio I HITL: Ninguna IA descarta candidatos ni toma decisiones | `T035`, `T058`, `T072`, `T073` | **100% CUBIERTO** |
+| `FR-034` | Llamada de screening de 7 dimensiones realizada 100% por persona humana | `T035`, `T058`, `T072`, `T073` | **100% CUBIERTO** |
+| `FR-035` | Principio II Anti-Scraping: Cero drivers Selenium, Playwright o scrapers | `T001`, `T002`, `T072`, `T073` | **100% CUBIERTO** |
+| `FR-036` | Principio V IA Ética: Cero procesamiento de atributos demográficos protegidos | `T023`, `T026`, `T029`, `T030`, `T072`, `T073` | **100% CUBIERTO** |
+| `FR-037` | Registro con correo `@tcs.com`, rol default `Compliance_Officer` y elevación | `T009`, `T014`, `T015`, `T017`, `T019`, `T021`, `T056`, `T064`, `T071`, `T072`, `T073` | **100% CUBIERTO** |
+| `FR-038` | Autenticación robusta bcrypt y expiración de sesiones por inactividad | `T003`, `T014`, `T015`, `T018`, `T021`, `T054`, `T056`, `T065`, `T069`, `T071`, `T072`, `T073` | **100% CUBIERTO** |
+| `FR-039` | Modelo RBAC de 4 roles corporativos internacionales | `T009`, `T014`, `T019`, `T021`, `T054`, `T056`, `T063`, `T064`, `T065`, `T071`, `T072`, `T073` | **100% CUBIERTO** |
+| `FR-040` | Cierre de sesión seguro e invalidación inmediata de tokens/sesión | `T054`, `T065`, `T071`, `T072`, `T073` | **100% CUBIERTO** |
+| `FR-041` | Trazabilidad obligatoria y atómica vinculando al usuario autenticado | `T022`, `T032`, `T034`, `T035`, `T042`, `T049`, `T053`, `T064`, `T070`, `T072`, `T073` | **100% CUBIERTO** |
+| `FR-042` | Bitácora inmutable append-only con usuario, rol, timestamp y deltas JSON | `T004`, `T005`, `T016`, `T017`, `T020`, `T022`, `T063`, `T071`, `T072`, `T073` | **100% CUBIERTO** |
+| `FR-043` | Inmutabilidad física estricta en base de datos mediante triggers SQL | `T005`, `T008`, `T013`, `T016`, `T020`, `T072`, `T073` | **100% CUBIERTO** |
+| `FR-044` | Vista cronológica en ficha con historial de cambios y autoría | `T057`, `T072`, `T073` | **100% CUBIERTO** |
+| `FR-045` | Registro en auditoría de eventos de seguridad (login, fallos, bloqueos) | `T015`, `T019`, `T021`, `T022`, `T056`, `T063`, `T064`, `T071`, `T072`, `T073` | **100% CUBIERTO** |
+| `FR-046` | Consola Central de Auditoría global con filtros y exportación Ley 29733 | `T063`, `T072`, `T073` | **100% CUBIERTO** |
+| `FR-047` | Control de concurrencia optimista con `record_version` para evitar colisiones | `T007`, `T010`, `T011`, `T013`, `T031`, `T032`, `T034`, `T070`, `T072`, `T073` | **100% CUBIERTO** |
+| `FR-048` | Atomicidad transaccional y rollback total en cargas ante fallas | `T006`, `T011`, `T038`, `T041`, `T042`, `T060`, `T072`, `T073` | **100% CUBIERTO** |
+
+---
+
+## Success Criteria Coverage (SC-001 to SC-010)
+
+| Criterio de Éxito | Métrica Objetivo | Tareas que lo Garantizan y Validan | Estado |
+|:------------------|:-----------------|:-----------------------------------|:------:|
+| `SC-001` | Reducción de 6-8 min a <45s en alta de ficha; erradicación de 25h/sem manuales | `T001`, `T002`, `T003`, `T023`, `T024`, `T025`, `T026`, `T027`, `T028`, `T029`, `T030`, `T031`, `T033`, `T034`, `T035`, `T055`, `T057`, `T058`, `T066`, `T068`, `T069`, `T070`, `T072`, `T073` | **100% VALIDADO** |
+| `SC-002` | Validación de planilla Adecco en <5s; erradicación de 5h/sem de cruce | `T036`, `T037`, `T038`, `T039`, `T040`, `T041`, `T042`, `T046`, `T060`, `T063`, `T067`, `T072`, `T073` | **100% VALIDADO** |
+| `SC-003` | Actualización de estados en 1-clic tiempo real; recuperación de 5h/sem | `T006`, `T007`, `T010`, `T032`, `T035`, `T058`, `T063`, `T068`, `T070`, `T072`, `T073` | **100% VALIDADO** |
+| `SC-004` | 0.00% `#DIV/0!`, 0.00% edad 127 años, 100% E.164 `+519XXXXXXXX` | `T002`, `T010`, `T012`, `T024`, `T025`, `T034`, `T050`, `T051`, `T052`, `T053`, `T057`, `T059`, `T070`, `T072`, `T073` | **100% VALIDADO** |
+| `SC-005` | 100% cumplimiento Ley 29733 en reporte Adecco (0.00% filtración) | `T047`, `T048`, `T049`, `T061`, `T072`, `T073` | **100% VALIDADO** |
+| `SC-006` | Aumento de CVs útiles Adecco del 10% a $\ge 35\%$ con 5 columnas oficiales | `T047`, `T048`, `T049`, `T061`, `T072`, `T073` | **100% VALIDADO** |
+| `SC-007` | 100% detección Boomerang en <1s, reduciendo verificación de 3 días a <1s | `T043`, `T044`, `T045`, `T046`, `T057`, `T060`, `T062`, `T067`, `T068`, `T072`, `T073` | **100% VALIDADO** |
+| `SC-008` | 100% mutaciones vinculadas a usuario en bitácora inmutable; 0.00% anónimas | `T001`, `T004`, `T005`, `T008`, `T013`, `T016`, `T017`, `T020`, `T022`, `T034`, `T035`, `T042`, `T049`, `T053`, `T057`, `T058`, `T061`, `T063`, `T070`, `T071`, `T072`, `T073` | **100% VALIDADO** |
+| `SC-009` | 100% bloqueo de accesos no autorizados; 0.00% contraseñas en claro | `T003`, `T009`, `T011`, `T014`, `T015`, `T017`, `T018`, `T019`, `T021`, `T054`, `T056`, `T064`, `T065`, `T069`, `T071`, `T072`, `T073` | **100% VALIDADO** |
+| `SC-010` | 0.00% sobreescrituras ciegas y 0.00% registros huérfanos/corruptos | `T005`, `T006`, `T007`, `T011`, `T013`, `T031`, `T032`, `T034`, `T038`, `T041`, `T042`, `T060`, `T070`, `T072`, `T073` | **100% VALIDADO** |
+
+---
+
+## Constitution Alignment & Architectural Layer Mapping
+
+| Principio Constitucional / Capa de Arquitectura | Compromiso Mandatorio | Tareas Asociadas | Estado de Verificación |
+|:------------------------------------------------|:----------------------|:-----------------|:----------------------:|
+| **I. Human-in-the-Loop Supremacy** | Ninguna IA descarta candidatos ni toma decisiones de contratación; llamada 7D 100% humana | `T035`, `T058`, `T070` | **COMPLIANT** |
+| **II. Zero Web-Scraping Compliance** | Cero automatización o scraping sobre LinkedIn Recruiter; operación basada en datos internos y archivos oficiales | `T001`, `T002`, `T041` | **COMPLIANT** |
+| **III. Relational Single Source of Truth** | Erradicación de `BD GENERAL FY27`, normalización E.164, edad dinámica y guardas `#DIV/0!` | `T006`, `T007`, `T012`, `T024`, `T025`, `T053` | **COMPLIANT** |
+| **IV. Deduplicación Algorítmica & Proveedor** | Deduplicación exacta + fonética Double Metaphone y Reporte de Exclusión oficial de 5 columnas (Ley 29733) | `T040`, `T041`, `T042`, `T048`, `T049` | **COMPLIANT** |
+| **V. IA Ética sin Atributos Protegidos** | Cero procesamiento de edad, género, estado civil, foto o dirección para calificar perfiles | `T029`, `T030`, `T057` | **COMPLIANT** |
+| **Capa 1: Intake Layer** | Ingesta estandarizada con catálogo de competencias y parsing asistido | `T027`, `T028`, `T029`, `T030` | **COMPLIANT** |
+| **Capa 2: Authorized Data Layer** | Esquema normalizado en SQLite/PostgreSQL y almacén de identidades | `T006`, `T007`, `T008` | **COMPLIANT** |
+| **Capa 3: TCS AI Engine** | Extracción estructurada LangChain y fallback heurístico local | `T029`, `T030` | **COMPLIANT** |
+| **Capa 4: Orchestration & Workflow** | Máquina de estados del embudo y ciclo de vida de postulaciones | `T031`, `T032`, `T034`, `T035` | **COMPLIANT** |
+| **Capa 5: Official Connectors Layer** | Adaptador de planillas Adecco y exportador oficial bajo Ley 29733 | `T041`, `T042`, `T048`, `T049` | **COMPLIANT** |
+| **Capa 6: Security & Governance Layer** | Autenticación bcrypt, control RBAC, triggers append-only y auditoría | `T008`, `T017`, `T018`, `T019`, `T020`, `T021`, `T022` | **COMPLIANT** |
+| **Capa 7: Analytics & Funnel Layer** | Dashboard con Tablero de Métricas del embudo y horas recuperadas | `T063` | **COMPLIANT** |
 
 ---
 
 ## Notes
 
-- **Formato Estricto**: Cada tarea comienza con `- [ ]`, seguida de su ID secuencial (`T001` a `T065`), indicador opcional `[P]`, etiqueta de historia (para historias de usuario `[US1]`, `[US2]`, `[US3]`, `[US4]`, `[US5]`, `[US6]`) y descripción precisa con ruta de archivo.
-- **TDD Riguroso**: En cada fase de historia de usuario, las tareas de redacción de pruebas preceden a las tareas de implementación.
-- **Inmutabilidad de Auditoría**: Cualquier mutación física de `bitacora_auditoria` está bloqueada a nivel de base de datos por los triggers `trg_prevent_update_bitacora` y `trg_prevent_delete_bitacora`.
+- **Formato Estricto**: El 100% de las tareas comienza con `- [ ]`, seguida de su ID secuencial (`T001` a `T073`), indicador opcional `[P]`, etiqueta obligatoria de historia para tareas de historia (`[US1]`, `[US2]`, `[US3]`, `[US4]`, `[US5]`, `[US6]`) y descripción precisa con ruta de archivo.
+- **TDD Riguroso**: En cada historia de usuario, las tareas de redacción y ejecución de pruebas de contratos y unitarias preceden a las tareas de implementación del código de producción.
+- **Inmutabilidad Física de Auditoría**: Cualquier mutación física de `bitacora_auditoria` está bloqueada a nivel de motor de base de datos por los triggers `trg_prevent_update_bitacora` y `trg_prevent_delete_bitacora`.
 - **Cero Web Scraping (Principio II)**: Cero navegadores headless o scrapers de LinkedIn; interoperabilidad exclusiva vía archivos autorizados y API REST oficial de APIsPERU.
 - **Supervisión Humana (Principio I)**: Ningún modelo de IA descarta candidatos ni toma decisiones; las 7 dimensiones y el dictamen de screening son 100% de autoría y ejecución humana.
