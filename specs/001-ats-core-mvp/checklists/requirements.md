@@ -31,13 +31,23 @@
 
 ## Notes
 
-- **Auditoría de Calidad y Cumplimiento Constitucional**:
-  - Se confirmó la ausencia total de nombres de tecnologías, frameworks o detalles de infraestructura (cero menciones de FastAPI, PostgreSQL, SQLAlchemy, React, etc., los cuales quedan reservados estrictamente para `plan.md`).
-  - La especificación erradica los 3 procesos críticos que consumen 35 horas semanales: Proceso 1 (Registro manual - 25h/sem), Proceso 2 (Actualización de estados - 5h/sem) y Proceso 3 (Cruce con Adecco - 5h/sem).
-  - Los 5 principios constitucionales fueron incorporados como reglas mandatorias:
-    1. *Human-in-the-Loop Supremacy*: Las decisiones de filtrado, descarte, oferta y la llamada de screening telefónico son 100% humanas (FR-027, FR-028).
-    2. *Zero Web-Scraping*: Se prohíbe el scraping a LinkedIn Recruiter; la plataforma opera sobre datos internos y archivos autorizados (FR-029).
-    3. *Relational Single Source of Truth*: Se eliminan las 11 pestañas del Excel, se normaliza el celular a E.164 (`+519XXXXXXXX`), la edad se calcula dinámicamente sin fallos (cero candidatos de 127 años) y las fórmulas de CTC tienen guardas contra división por cero (`#DIV/0!`).
-    4. *Deduplicación y Control de Adecco*: Semáforo algorítmico masivo para planillas externas y reporte de exclusión a demanda bajo Ley N° 29733.
-    5. *IA Ética sin Sesgos*: Prohibición expresa de considerar atributos protegidos (edad, género, estado civil, foto, domicilio exacto) en el análisis de candidatos (FR-030).
-  - Todos los criterios de calidad han sido revisados y satisfechos favorablemente. La especificación se encuentra lista para la fase de arquitectura y planificación técnica (`/speckit-plan`).
+- **Auditoría de Calidad y Cumplimiento Constitucional (v1.1.0 - Revisión Exhaustiva)**:
+  - Se confirmó la ausencia total de nombres de tecnologías, frameworks o detalles de infraestructura (cero menciones de FastAPI, PostgreSQL, SQLAlchemy, React, Docker, SQLite, etc., los cuales quedan reservados estrictamente para `plan.md`).
+  - La especificación erradica los 3 procesos críticos que consumen 35 horas semanales de dolor operativo documentados en `CONSOLIDADO_MASTER_RECLUTAMIENTO_IA.md`:
+    * Proceso 1 (Registro manual - 25h/sem): Erradicado con Ficha Única, autollenado por DNI, normalización canónica E.164 (+51) con enlace a WhatsApp Web, extracción estructurada de CVs y captura de las 7 dimensiones de la llamada humana.
+    * Proceso 2 (Actualización de estados - 5h/sem): Centralizado en modelo unificado de postulación relacional en tiempo real.
+    * Proceso 3 (Cruce con Adecco - 5h/sem): Resuelto con validador algorítmico masivo de semáforo (🔴 Rojo, 🟡 Amarillo, 🟢 Verde) y reporte de exclusión a demanda bajo Ley N° 29733.
+  - Los 5 principios de `.specify/memory/constitution.md` fueron incorporados como reglas funcionales mandatorias:
+    1. *Human-in-the-Loop Supremacy*: Prohibición absoluta de descarte o decisión autónoma por IA (FR-033). La llamada telefónica con sus 7 dimensiones de validación es 100% conducida por una reclutadora humana (FR-011, FR-034).
+    2. *Zero Web-Scraping*: Prohibición expresa de automatizaciones contra LinkedIn Recruiter; operación basada en datos internos y archivos formalmente autorizados (FR-035).
+    3. *Relational Single Source of Truth*: Erradicación de las 11 pestañas de `BD GENERAL FY27`, normalización estricta a E.164 (`+519XXXXXXXX`), cálculo dinámico de edad (cero candidatos de 127 años) y blindaje contra división por cero (`#DIV/0!`) en fórmulas de variación CTC (FR-004, FR-005, FR-026, FR-027).
+    4. *Deduplicación Algorítmica y Control del Proveedor*: Semáforo masivo para planillas externas con detección cruzada de candidatos Boomerang (FR-017) para evitar pagos indebidos de comisión, y reporte de exclusión a demanda bajo Ley N° 29733 (FR-020 a FR-023).
+    5. *IA Ética sin Sesgos*: Prohibición expresa de procesar atributos protegidos (edad, género, estado civil, foto, domicilio exacto) como criterios de selección o filtrado (FR-036).
+  - Se resolvieron y cerraron taxativamente las brechas y casos no contemplados en el intento previo:
+    * Reconciliación y tokenización fonética para nombres compuestos y permutación de apellidos peruanos (Edge Case 5, FR-016).
+    * Manejo de indisponibilidad, DNI inexistente en padrón oficial y agotamiento de cuota mensual en servicios de identidad nacional (Edge Cases 2, 3, 4; FR-003).
+    * Diferenciación funcional entre descartes históricos permanentes no recuperables (BGC fallido, ética, antecedentes) que jamás pasan a amarillo vs cierres temporales (Edge Case 12, FR-015).
+    * Conversión y simulación asistida de pretensiones salariales expresadas en Sueldo Neto hacia Bruto referencial (~21% retención) antes de computar CTC con factor 1.56 (FR-025).
+    * Alerta de conmutación geográfica (Distrito de residencia vs Sede del cliente, ej. BCP La Molina) incorporada a la ficha de llamada humana (FR-011).
+  - La especificación cuenta con 36 requerimientos funcionales testables (FR-001 a FR-036), 7 entidades funcionales del modelo de negocio, 7 criterios de éxito medibles (SC-001 a SC-007) y 9 supuestos documentados sin marcadores `[NEEDS CLARIFICATION]`.
+  - El artefacto se encuentra formalmente validado y listo para la fase de arquitectura técnica (`/speckit-plan`).
