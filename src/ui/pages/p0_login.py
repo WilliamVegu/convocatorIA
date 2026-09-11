@@ -39,7 +39,7 @@ def render_login_page() -> None:
                             db.commit()
 
                             login_user(
-                                user_id=auth_res["usuario_id"],
+                                user_id=auth_res.get("usuario_id") or auth_res.get("id"),
                                 email=auth_res["email"],
                                 nombres_completos=auth_res["nombres_completos"],
                                 rol=auth_res["rol"],
@@ -135,7 +135,7 @@ def _quick_login(email: str, password: str) -> None:
             db.commit()
 
             login_user(
-                user_id=auth_res["usuario_id"],
+                user_id=auth_res.get("usuario_id") or auth_res.get("id"),
                 email=auth_res["email"],
                 nombres_completos=auth_res["nombres_completos"],
                 rol=auth_res["rol"],

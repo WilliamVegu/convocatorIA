@@ -20,6 +20,22 @@ def test_login_page_renders_unauthenticated():
     assert len(at.text_input) >= 2
 
 
+def test_login_form_successful_submission():
+    """Verify that submitting valid credentials via form logs in cleanly."""
+    at = AppTest.from_file(APP_PATH)
+    at.run()
+    assert not at.exception
+    at.text_input[0].input("admin.ta@tcs.com")
+    at.text_input[1].input("Password123!")
+    at.button[0].click()
+    at.run()
+    assert not at.exception
+    assert at.session_state["is_authenticated"] is True
+    assert at.session_state["email"] == "admin.ta@tcs.com"
+    assert at.session_state["user_id"] == "usr-admin-bootstrap-001"
+    assert at.session_state["rol"] == "Head_of_Talent_Acquisition"
+
+
 def test_all_pages_render_authenticated_as_admin():
     """Verify that all 8 functional pages render without unhandled exceptions for Head of TA."""
     at = AppTest.from_file(APP_PATH)

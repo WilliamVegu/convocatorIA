@@ -66,6 +66,7 @@ class AuthService(AuthPort):
 
         return {
             "id": user.id,
+            "usuario_id": user.id,
             "nombres_completos": user.nombres_completos,
             "email": user.email,
             "rol": user.rol,
@@ -146,6 +147,7 @@ class AuthService(AuthPort):
 
         return {
             "id": user.id,
+            "usuario_id": user.id,
             "nombres_completos": user.nombres_completos,
             "email": user.email,
             "rol": user.rol,
