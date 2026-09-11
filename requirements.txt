@@ -1,0 +1,18 @@
+# ATS Core MVP - Dependencies
+streamlit>=1.38.0
+sqlalchemy>=2.0.30
+pydantic>=2.8.0
+openpyxl>=3.1.2
+pandas>=2.2.0
+pypdf>=4.3.0
+pymupdf>=1.24.0
+bcrypt>=4.1.0
+passlib[bcrypt]>=1.7.4
+rapidfuzz>=3.9.0
+requests>=2.32.0
+python-dotenv>=1.0.1
+pytest>=8.2.0
+pytest-cov
+langchain>=0.2.14
+langchain-google-genai>=1.0.8
+langchain-xai>=0.1.1
