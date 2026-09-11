@@ -20,7 +20,8 @@ ENV/
 env/
 
 # IDE / Editor artifacts
-.vscode/
+.vscode/*
+!.vscode/launch.json
 .idea/
 *.swp
 *.swo
