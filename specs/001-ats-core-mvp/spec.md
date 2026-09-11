@@ -3,7 +3,7 @@
 **Feature Branch**: `001-ats-core-mvp`  
 **Created**: 2026-09-10  
 **Status**: Draft  
-**Input**: User description: "ats-core-mvp: Erradicar las 35 horas semanales de dolor operativo del equipo de Reclutamiento y Selección mediante la Ficha Única de Candidato con autollenado de DNI y normalización E.164, Validador masivo de planillas de Adecco con semáforo de duplicados, Generador a demanda de reporte de exclusión bajo Ley 29733, Simulador financiero CTC con Factor 1.56 blindado contra división por cero, y Alerta automática de ex-colaboradores TCS (Boomerang)."
+**Input**: User description: "ats-core-mvp: Erradicar las 35 horas semanales de dolor operativo del equipo de Reclutamiento y Selección mediante la Ficha Única de Candidato con autollenado de DNI y normalización E.164, Validador masivo de planillas de Adecco con semáforo de duplicados, Generador a demanda de reporte de exclusión bajo Ley 29733, Simulador financiero CTC con Factor 1.56 blindado contra división por cero, y Alerta automática de ex-colaboradores TCS (Boomerang)." + Requerimiento mandatorio añadido en Gate de Revisión: "En todo esto debe haber un sistema de registro e inicio de sesión, y que al hacer cambios (subir archivos, cambiar datos, etc.), todos estos queden con el registro de quien lo realizó".
 
 ---
 
@@ -208,6 +208,50 @@ para visualizar de inmediato su antecedente corporativo, fecha de cese, cuenta e
 
 ---
 
+### User Story 6 - Autenticación, Control de Acceso Basado en Roles y Trazabilidad Integral con Registro Inmutable de Auditoría (Priority: P1)
+
+Como reclutadora técnica, analista de selección, coordinador de cuenta o administrador del sistema,  
+quiero registrarme, iniciar y cerrar sesión de manera segura con credenciales corporativas protegidas, acceder exclusivamente a las funciones y datos asignados a mi rol operativo, y contar con una bitácora inmutable de auditoría donde cada cambio de datos, subida de archivos, transición de estado, validación masiva o descarga de reporte quede estrictamente vinculado con mi identidad, marca de tiempo y detalle de la modificación,  
+para deslindar inequívocamente las responsabilidades operativas sobre los candidatos y postulaciones, prevenir accesos o modificaciones anónimas en el pipeline de selección, y garantizar el estricto cumplimiento de las políticas de custodia de información y la Ley N° 29733.
+
+**Why this priority**: Es el pilar fundacional e innegociable de seguridad, gobernanza y responsabilidad institucional. Sin autenticación individual y trazabilidad integral (audit trail), cualquier alteración en fichas de postulantes, subida de documentos, ingesta de planillas de Adecco o exportación de reportes queda anónima, impidiendo saber quién autorizó una oferta, quién modificó una expectativa salarial, quién cargó un CV o quién ejecutó un descarte, vulnerando los controles de auditoría interna de TCS y las normas de protección de datos personales.
+
+**Independent Test**: Puede ser probado de forma independiente registrando una cuenta con correo institucional (`@tcs.com`) y credencial de acceso robusta, iniciando sesión para obtener acceso autorizado, navegando por el sistema bajo perfiles con diferentes roles (Reclutadora, Coordinador/Administrador, Observador), ejecutando mutaciones de prueba (editar un campo de candidato, subir un CV en PDF, cambiar el estado del embudo, cargar una planilla de prueba y generar el reporte de exclusión), verificando que la bitácora inmutable asiente de inmediato cada evento con el identificador del usuario actor, fecha/hora exacta con zona horaria, acción realizada y valores antes/después, e intentando realizar mutaciones con un rol no autorizado (Observador) o con una sesión cerrada/expirada comprobando el bloqueo preventivo y registro del intento.
+
+**Acceptance Scenarios**:
+
+1. **Scenario 6.1 (Registro e inicio de sesión de usuario corporativo con sesión protegida):**  
+   **Given** un integrante del equipo de selección que cuenta con correo institucional de la compañía (`@tcs.com`),  
+   **When** completa el formulario de registro ingresando sus nombres completos, correo corporativo y una credencial de acceso que satisfaga las políticas institucionales de robustez,  
+   **Then** el sistema crea la cuenta de usuario de forma segura salvaguardando la confidencialidad de las credenciales sin exponerlas en texto claro, y al iniciar sesión emite una sesión autenticada activa con expiración automática por inactividad, desplegando la identidad del usuario en la interfaz del sistema.
+
+2. **Scenario 6.2 (Control de acceso basado en roles - Reclutadora, Administrador/Coordinador, Observador):**  
+   **Given** tres usuarios con diferentes perfiles operativos: Reclutadora (operación ordinaria del embudo), Administrador/Coordinador (gestión de usuarios, autorizaciones presupuestales y auditoría global) y Observador (modo consulta y analítica),  
+   **When** el usuario con rol de Observador intenta editar una ficha, subir un currículo o alterar el estado de una postulación,  
+   **Then** el sistema bloquea de inmediato la operación de escritura, despliega un aviso formal de permiso denegado ("Acceso denegado: su rol solo posee permisos de consulta"), preserva los datos existentes intactos y registra en la bitácora de seguridad el intento de mutación no autorizada.
+
+3. **Scenario 6.3 (Trazabilidad obligatoria y atómica en mutaciones de Ficha de Candidato y Postulación):**  
+   **Given** una reclutadora autenticada con usuario `carla.soto@tcs.com` que visualiza la postulación activa de un candidato,  
+   **When** modifica la expectativa salarial de S/. 4,500 a S/. 5,200 o transiciona el estado del embudo de `Screening telefónico` a `Pendiente entrevistas`,  
+   **Then** el sistema persiste la modificación y de forma atómica e indisociable genera un registro en la bitácora de auditoría vinculando el identificador del candidato/postulación, el usuario ejecutor, la marca de tiempo exacta con zona horaria, el campo modificado, el valor previo y el valor nuevo, desplegando este evento de inmediato en la línea de tiempo histórica de la ficha.
+
+4. **Scenario 6.4 (Trazabilidad estricta en subida de documentos y carga masiva de planillas de Adecco):**  
+   **Given** un usuario autenticado que adjunta un archivo de currículo (CV en PDF o Word) a una ficha o carga una planilla masiva de Adecco con 50 postulantes,  
+   **When** culmina con éxito la transferencia y procesamiento del archivo,  
+   **Then** el sistema asocia de forma permanente el documento o lote al usuario autenticado, registrando en la bitácora de auditoría el identificador del operador, fecha y hora precisa, nombre original del archivo, tamaño en bytes, identificador de integridad del documento y resultado de la operación, prohibiendo cualquier ingesta documental anónima.
+
+5. **Scenario 6.5 (Trazabilidad de exportaciones regulatorias bajo Ley 29733 y simulaciones financieras):**  
+   **Given** un usuario autenticado que solicita la generación y descarga del Reporte de Exclusión para Adecco o formaliza el cálculo de simulación CTC para una oferta,  
+   **When** se produce la exportación o el guardado del análisis financiero,  
+   **Then** el sistema consigna en la bitácora de auditoría el identificador del usuario solicitante, tipo de acción, parámetros o filtros aplicados, cantidad de registros exportados y estampa temporal exacta, garantizando la rendición de cuentas para fines regulatorios y de control interno.
+
+6. **Scenario 6.6 (Cierre de sesión seguro e invalidación inmediata de sesión activa):**  
+   **Given** una reclutadora con una sesión autenticada activa en el sistema,  
+   **When** presiona la opción "Cerrar Sesión",  
+   **Then** el sistema invalida de inmediato la sesión activa, revoca los identificadores de autorización y redirige a la pantalla de inicio de sesión, impidiendo que cualquier intento de navegación hacia atrás en el historial del navegador permita acceder a información o realizar acciones sin autenticarse nuevamente.
+
+---
+
 ### Edge Cases
 
 1. **Documento de Identidad Extranjero o No Estandarizado (Carné de Extranjería / Pasaporte):**  
@@ -257,6 +301,22 @@ para visualizar de inmediato su antecedente corporativo, fecha de cese, cuenta e
 12. **Descartes Históricos Irreversibles frente al Paso del Tiempo en Validador de Proveedor:**  
     ¿Puede un candidato descartado hace más de 6 meses por motivos éticos, antecedentes penales o fraude ser considerado reactivable amarillo en planillas de Adecco?  
     *Comportamiento del sistema*: Las reglas de reactivación temporal aplican única y exclusivamente a motivos no excluyentes (salario, vacante cerrada, falta momentánea de seniority). Los descartes clasificados como irreversibles o de compliance nunca expiran y se categorizan invariablemente como 🔴 Rojo en cualquier cotejo posterior.
+
+13. **Intentos Reiterados de Autenticación Fallida y Bloqueo Preventivo de Cuenta:**  
+    ¿Qué ocurre si un usuario o agente externo ingresa credenciales erróneas de forma reiterada (ej. 5 intentos fallidos consecutivos)?  
+    *Comportamiento del sistema*: El sistema incrementa el contador de intentos fallidos, responde con un mensaje neutral que no revele la existencia previa del correo ("Credenciales no válidas"), bloquea preventivamente el acceso a la cuenta durante 15 minutos al superar los 5 intentos y genera un evento de auditoría de seguridad detallando el identificador ingresado y la marca de tiempo.
+
+14. **Expiración de Sesión por Inactividad durante Edición de Ficha o Carga de Datos:**  
+    ¿Qué sucede si una reclutadora deja una ficha de candidato o formulario de llamada abierto sin interactuar durante un lapso prolongado (ej. 30 minutos) y luego presiona "Guardar"?  
+    *Comportamiento del sistema*: El sistema detecta la sesión expirada, retiene localmente en el navegador los datos modificados para proteger el trabajo de la reclutadora, despliega una ventana modal de reautenticación solicitando credenciales, y tras una validación exitosa, aplica la mutación registrando en la bitácora de auditoría al usuario autenticado sin pérdida de información.
+
+15. **Solicitud de Mutación sin Autenticación Activa o con Permisos Insuficientes:**  
+    ¿Qué sucede si se envía una solicitud de modificación de datos, subida de documentos o exportación sin una sesión autenticada válida o desde una cuenta con permisos restringidos (ej. rol Observador intentando editar un candidato)?  
+    *Comportamiento del sistema*: El sistema intercepta y deniega categóricamente la solicitud, bloquea la ejecución de cualquier cambio en la base de datos, emite una notificación de "Acceso Denegado" y registra en la bitácora de seguridad el evento con el usuario, rol, recurso objetivo y estampa temporal.
+
+16. **Garantía de Inmutabilidad y Bloqueo de Alteración Retroactiva en la Bitácora de Auditoría:**  
+    ¿Puede un usuario con privilegios de Administrador o Coordinador editar, sobrescribir o eliminar registros de la bitácora de auditoría para encubrir un error o modificación indebida?  
+    *Comportamiento del sistema*: La bitácora de auditoría es estrictamente inmutable y opera bajo arquitectura de solo adición (*append-only*). La aplicación no provee interfaces ni mecanismos funcionales para modificar o purgar asientos históricos. Cualquier consulta a la bitácora es de solo lectura y cualquier intento de mutación directa es rechazado por las políticas de integridad de datos del sistema.
 
 ---
 
@@ -315,6 +375,27 @@ para visualizar de inmediato su antecedente corporativo, fecha de cese, cuenta e
 - **FR-035**: En estricto apego al principio constitucional anti-scraping, el sistema DEBE operar exclusivamente sobre datos propios almacenados internamente y archivos formalmente importados/exportados, sin ejecutar ningún mecanismo de automatización sobre la web de LinkedIn Recruiter.
 - **FR-036**: Los modelos de análisis y extracción estructurada NO DEBEN considerar en ningún momento atributos protegidos (edad, género, estado civil, dirección domiciliaria exacta o fotografía) para calificar perfiles, garantizando una evaluación técnica objetiva y auditable.
 
+#### Autenticación, Control de Acceso y Trazabilidad Integral (Seguridad y Gobernanza)
+- **FR-037**: El sistema DEBE proveer un mecanismo seguro de registro de cuentas para usuarios corporativos, requiriendo nombres y apellidos completos, correo electrónico institucional (`@tcs.com`) y credencial de acceso que satisfaga políticas de longitud y robustez.
+- **FR-038**: El sistema DEBE autenticar las credenciales de los usuarios protegiendo su confidencialidad sin exponerlas en texto claro, y gestionar sesiones autenticadas con expiración automática tras un lapso de inactividad configurable.
+- **FR-039**: El sistema DEBE implementar un modelo de Control de Acceso Basado en Roles (RBAC) con al menos tres niveles de permisos operativos:
+  - *Reclutadora*: Creación y modificación de fichas de candidatos, edición del embudo de postulaciones asignadas, registro del screening telefónico, carga de currículos, validación de planillas de Adecco y generación del reporte de exclusión.
+  - *Coordinador / Administrador*: Todos los privilegios operativos de Reclutadora más administración de cuentas de usuario, asignación de roles, autorización de variaciones presupuestales salariales fuera de banda y consulta de la bitácora global de auditoría.
+  - *Observador*: Acceso exclusivamente en modo de solo lectura a fichas, postulaciones, tableros de control y reportes consolidados, con prohibición estricta de crear registros, mutar datos o cargar archivos.
+- **FR-040**: El sistema DEBE incorporar una función explícita de cierre de sesión seguro que invalide de inmediato la sesión activa en el sistema e impida la reutilización de identificadores de sesión previos.
+- **FR-041**: El sistema DEBE asociar de manera obligatoria, automática e indisociable al usuario autenticado en sesión con cada una de las siguientes operaciones del pipeline:
+  - Creación y edición de campos en la Ficha Única de Candidato (datos personales, de contacto y residencia).
+  - Creación y cambios de estado en el ciclo de vida de la Postulación (desde ingreso hasta cierre o contratación).
+  - Registro y modificación de la expectativa salarial, cálculo CTC y autorizaciones presupuestales.
+  - Carga, reemplazo o actualización de archivos de currículo (CV) y documentos anexos.
+  - Ingesta y validación masiva de planillas de candidatos remitidas por Adecco.
+  - Generación y descarga a demanda de Reportes de Exclusión bajo Ley N° 29733.
+  - Registro estructurado de las 7 dimensiones y dictamen cualitativo de la llamada humana de screening telefónico.
+- **FR-042**: El sistema DEBE persistir cada evento de mutación o acción relevante en una bitácora inmutable de auditoría (*append-only*), registrando obligatoriamente: identificador único del evento, identificador y correo del usuario ejecutor, rol del usuario al momento de la acción, marca de tiempo precisa con zona horaria, tipo de entidad afectada (Candidato, Postulación, Documento, Planilla, Reporte, Usuario), identificador del registro afectado, tipo de operación (Creación, Modificación, Carga de Archivo, Exportación, Transición de Estado, Autenticación, Acceso Denegado), y en modificaciones de datos, el detalle comparativo de los valores previos y nuevos valores resultantes.
+- **FR-043**: La bitácora de auditoría DEBE ser estrictamente inmutable; el sistema DEBE prohibir y rechazar funcionalmente cualquier modificación retroactiva, alteración o eliminación de eventos de auditoría registrados, garantizando que el historial sea íntegro, perdurable y no repudiable.
+- **FR-044**: El sistema DEBE presentar en la interfaz de la Ficha Única del Candidato y de la Postulación una vista cronológica accesible que despliegue el historial completo de cambios, indicando el usuario responsable, la fecha/hora y el detalle del cambio realizado.
+- **FR-045**: El sistema DEBE registrar en la bitácora de seguridad los eventos de control de acceso, tales como inicios de sesión exitosos, intentos fallidos de autenticación, bloqueos temporales por reiteración de fallos e intentos de ejecución de operaciones no autorizadas por rol.
+
 ---
 
 ### Key Entities *(mandatory)*
@@ -343,6 +424,12 @@ para visualizar de inmediato su antecedente corporativo, fecha de cese, cuenta e
 - **Reporte de Exclusión de Proveedor (Exportación a Demanda):**  
   Entidad que audita las descargas de listas de exclusión para proveedores bajo la Ley N° 29733. Atributos: Identificador de Reporte, Destinatario (Adecco), Fecha y Hora de Generación, Usuario Solicitante, Cuenta/Cliente Filtrado (o consolidado general), Cantidad de Candidatos Excluidos, y Periodo de Vigencia de la Exclusión.
 
+- **Usuario (Operador del Sistema y Cuenta Corporativa):**  
+  Representa a la persona física individual autorizada para operar el sistema en sus distintas capacidades. Sus atributos funcionales comprenden: Identificador de Usuario, Nombres y Apellidos Completos, Correo Electrónico Corporativo Oficial (único, dominio institucional `@tcs.com`), Rol Asignado (`Reclutadora`, `Coordinador_Admin`, `Observador`), Estado de la Cuenta (`Activa`, `Suspendida`, `Bloqueada por Intentos Fallidos`), Credencial de Acceso Confidencial, Contador de Intentos Fallidos de Autenticación, Fecha y Hora del Último Acceso Exitoso, y Marcas Temporales de Creación y Modificación. Posee una relación 1:N con las Postulaciones asignadas y con los Registros de Auditoría generados por sus acciones.
+
+- **Registro de Auditoría / Bitácora de Cambios (Trazabilidad Inmutable):**  
+  Modela el asiento cronológico e inmutable de toda acción, mutación de datos, subida de documentos, exportación regulatoria o evento de seguridad ejecutado en el sistema. Atributos funcionales: Identificador Único de Evento, Referencia al Usuario Actor (Identificador y Correo Institucional), Rol Operativo del Usuario al momento de la operación, Marca de Tiempo Precisa (fecha, hora exacta y zona horaria), Tipo de Acción Realizada (`Creación`, `Modificación`, `Carga_Archivo`, `Exportación`, `Transición_Estado`, `Autenticación`, `Acceso_Denegado`), Entidad Objeto Afectada (`Candidato`, `Postulación`, `Screening`, `Planilla_Adecco`, `Reporte_Exclusión`, `Usuario`), Identificador del Registro Objeto Afectado, Detalle Estructurado de la Mutación (nombre del campo modificado, valor previo y nuevo valor resultante), y Metadatos de Integridad Documental (nombre original del archivo, tipo de documento, tamaño en bytes e identificador de almacenamiento para archivos adjuntos).
+
 ---
 
 ## Success Criteria *(mandatory)*
@@ -363,6 +450,10 @@ para visualizar de inmediato su antecedente corporativo, fecha de cese, cuenta e
   Elevar el ratio de perfiles útiles remitidos por Adecco del 10% actual (donde 9 de cada 10 son repetidos o inadecuados) a al menos 35% en los primeros 60 días de entrega regular del reporte de exclusión a demanda.
 - **SC-007 (Detección de Talento Boomerang y Ahorro de Comisiones en Tiempo Real):**  
   Identificar al 100% de los ex-colaboradores de TCS postulantes (tanto por ficha individual como por planilla masiva) en menos de 1 segundo desde su ingreso, reduciendo el tiempo de verificación de antecedentes internos de 3 días a menos de 1 segundo y previniendo el pago innecesario de comisiones comerciales por perfiles Alumni.
+- **SC-008 (Trazabilidad y Responsabilidad Operativa al 100%):**  
+  Garantizar que el 100% de las mutaciones de datos, cambios de estado en el embudo, subida de CVs, ingesta de planillas masivas y exportaciones de reportes de exclusión queden vinculadas a un usuario autenticado con marca de tiempo precisa en la bitácora inmutable, con 0.00% de operaciones anónimas permitidas o huérfanas de autoría.
+- **SC-009 (Seguridad de Acceso y Control de Roles):**  
+  Lograr una tasa de 100% de efectividad en el bloqueo de accesos no autorizados a funciones restringidas (ej. edición o carga denegada para rol Observador) y una tasa de 0.00% de exposición de credenciales en texto claro o de sesiones activas sin invalidar tras el cierre de sesión.
 
 ---
 
@@ -377,3 +468,4 @@ para visualizar de inmediato su antecedente corporativo, fecha de cese, cuenta e
 - **A-007 (Acuerdo Operativo con Adecco):** Se asume que el proveedor externo Adecco aceptará recibir y utilizar el reporte de exclusión a demanda como filtro previo mandatario antes de iniciar sus jornadas de búsqueda y remitir sus planillas semanales.
 - **A-008 (Reconciliación Fonética y Permutación de Nombres):** Se asume que la disparidad en el orden de nombres y apellidos en perfiles peruanos se resuelve mediante tokenización, eliminación de partículas y cotejo de similitud aproximada con confirmación humana en casos limítrofes (80-89% de similitud).
 - **A-009 (Integridad de la Base Histórica Alumni):** Se asume que Recursos Humanos suministrará un volcado maestro inicial de ex-colaboradores TCS con DNI, nombres y condición de recontratabilidad para alimentar el motor de detección de candidatos Boomerang.
+- **A-010 (Gestión de Identidades y Cuentas Corporativas):** Se asume que todos los colaboradores autorizados del equipo de Selección (reclutadoras, coordinadores y observadores) cuentan con un correo corporativo oficial institucional de TCS (`@tcs.com`) y que el sistema gestiona la autenticación, roles operativos y sesiones activas de manera autónoma garantizando la trazabilidad integral de sus operaciones.
