@@ -1,6 +1,7 @@
 """Main Streamlit application router and navigation for ATS TCS Perú."""
 from __future__ import annotations
 
+import os
 import streamlit as st
 
 from src.adapters.persistence.database import init_db, SessionLocal
@@ -58,9 +59,14 @@ def main() -> None:
     render_header(current_user=current_user)
 
     # Sidebar Navigation Menu
+    logo_path = "assets/tcs_logo.png"
+    if os.path.exists(logo_path):
+        st.sidebar.image(logo_path, use_container_width=True)
     st.sidebar.markdown("### 🏢 Menú de Operaciones")
-    st.sidebar.caption(f"Operador: **{current_user['nombres_completos']}**")
-    st.sidebar.caption(f"Rol: `{current_user['rol']}`")
+    st.sidebar.markdown(f"👤 **{current_user['nombres_completos']}**")
+    rol_display = current_user['rol'].replace('_', ' ')
+    st.sidebar.markdown(f"<span class='tcs-badge tcs-badge-blue'>{rol_display}</span>", unsafe_allow_html=True)
+    st.sidebar.markdown("<hr style='margin: 10px 0; border: none; border-top: 1px solid #334155;'/>", unsafe_allow_html=True)
 
     nav_options = [
         "📋 Ficha Única de Candidato",

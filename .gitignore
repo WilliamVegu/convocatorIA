@@ -37,3 +37,7 @@ Desktop.ini
 *.db-shm
 logs/
 
+# Secrets and local environment
+.env
+.pytest_cache/
+

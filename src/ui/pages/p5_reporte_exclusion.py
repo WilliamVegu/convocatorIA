@@ -24,18 +24,11 @@ def render_reporte_exclusion_page() -> None:
     user_email = user.get("email", "demo@tcs.com")
     user_role = user.get("rol", "Compliance_Officer")
 
-    st.markdown(
-        """
-        <div style="background-color: #ECFDF5; border-left: 4px solid #10B981; padding: 12px; border-radius: 6px; margin-bottom: 16px;">
-            <b style="color: #065F46;">🛡️ Blindaje de Privacidad y Censura Legal Verificada:</b>
-            <ul style="margin: 4px 0 0 0; padding-left: 20px; color: #047857; font-size: 0.88rem;">
-                <li>Exactamente 5 columnas: <code>DNI</code>, <code>Nombres y Apellidos</code>, <code>Perfil</code>, <code>Vigencia de Exclusión</code> y <code>Estado</code>.</li>
-                <li><b>0.00% presencia</b> de números telefónicos, correos electrónicos personales, salarios pretendidos ni notas operativas.</li>
-                <li>Trazabilidad inmutable de exportación vinculada al usuario solicitante.</li>
-            </ul>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    st.success(
+        "🛡️ **Blindaje de Privacidad y Censura Legal Verificada:**\n\n"
+        "• **Exactamente 5 columnas:** `DNI`, `Nombres y Apellidos`, `Perfil`, `Vigencia de Exclusión` y `Estado`.\n"
+        "• **0.00% presencia** de teléfonos, correos personales, salarios pretendidos ni notas operativas.\n"
+        "• **Trazabilidad inmutable:** Exportación vinculada automáticamente al usuario solicitante."
     )
 
     c_filt, c_dias = st.columns([3, 1])

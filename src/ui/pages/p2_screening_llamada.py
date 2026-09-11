@@ -48,14 +48,13 @@ def render_screening_page() -> None:
         return
 
     # Display candidate context
-    st.markdown(
-        f"""
-        <div style="background-color: #F1F5F9; border-left: 4px solid #0076CE; padding: 10px; border-radius: 4px; margin-bottom: 16px;">
-            <b>Candidato:</b> {selected_cand.nombres_completos} | <b>DNI:</b> {selected_cand.numero_documento} | <b>Teléfono:</b> {selected_cand.telefono_e164}<br/>
-            <b>Residencia:</b> {selected_cand.distrito_residencia or 'Lima'} | <b>Cliente Destino:</b> {selected_post.cliente_cuenta} | <b>Estado Actual:</b> `{selected_post.estado_embudo}`
-        </div>
-        """,
-        unsafe_allow_html=True,
+    st.info(
+        f"👤 **Candidato:** {selected_cand.nombres_completos} &nbsp;|&nbsp; "
+        f"**DNI:** `{selected_cand.numero_documento}` &nbsp;|&nbsp; "
+        f"**Teléfono:** `{selected_cand.telefono_e164}`\n\n"
+        f"📍 **Residencia:** {selected_cand.distrito_residencia or 'Lima'} &nbsp;|&nbsp; "
+        f"**Cliente Destino:** {selected_post.cliente_cuenta} &nbsp;|&nbsp; "
+        f"**Estado Actual:** `{selected_post.estado_embudo}`"
     )
 
     with st.form("form_screening_hitl"):

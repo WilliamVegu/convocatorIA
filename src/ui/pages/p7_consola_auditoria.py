@@ -85,7 +85,15 @@ def _render_consola_auditoria() -> None:
         st.markdown("---")
         st.markdown("#### 🔍 Inspector de Diferencias JSON (Valores Anteriores vs Nuevos)")
         log_ids = [l.id for l in logs]
-        selected_log_id = st.selectbox("Seleccione un ID de evento de auditoría para inspeccionar:", log_ids)
+        log_map = {
+            l.id: f"#{l.id} | {l.timestamp.strftime('%H:%M:%S')} — {l.tipo_accion} en {l.entidad_objeto} ({l.usuario_email})"
+            for l in logs
+        }
+        selected_log_id = st.selectbox(
+            "Seleccione un ID de evento de auditoría para inspeccionar:",
+            log_ids,
+            format_func=lambda lid: log_map.get(lid, str(lid)),
+        )
 
         if selected_log_id:
             selected_entry = audit_repo.get_by_id(selected_log_id)

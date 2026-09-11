@@ -85,15 +85,15 @@ def render_simulador_ctc_page() -> None:
                 "red" if semaforo == "Fuera_Banda" else "gray"
             )
         )
-        st.markdown(
-            f"""
-            <div style="padding: 12px; border-radius: 8px; border: 1px solid #CBD5E1; background: #FFFFFF; margin-top: 10px;">
-                <b>Estado de Viabilidad Presupuestal:</b> {render_badge(semaforo.replace('_', ' '), badge_type)}<br/>
-                <small style="color: #64748B;">Guardas matemáticas activas: 0.00% riesgo de error #DIV/0! ante presupuestos vacíos o nulos.</small>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        sem_display = semaforo.replace('_', ' ')
+        if semaforo == "Dentro_Presupuesto":
+            st.success(f"✅ **Estado de Viabilidad Presupuestal:** `{sem_display}` — *Dentro del techo presupuestado del cliente.*")
+        elif semaforo == "Requiere_Aprobacion":
+            st.warning(f"⚠️ **Estado de Viabilidad Presupuestal:** `{sem_display}` — *Variación entre 0% y 10%. Requiere aprobación de excepción por Head of TA.*")
+        elif semaforo == "Fuera_Banda":
+            st.error(f"🚫 **Estado de Viabilidad Presupuestal:** `{sem_display}` — *Variación superior al 10%. Fuera de banda presupuestal.*")
+        else:
+            st.info(f"ℹ️ **Estado de Viabilidad Presupuestal:** `{sem_display}` — *Guardas matemáticas activas: 0.00% riesgo de error #DIV/0! ante presupuestos vacíos.*")
 
         # Atypical salary warnings
         warn_atipico = calc_result.get("advertencia_rango_atipico")

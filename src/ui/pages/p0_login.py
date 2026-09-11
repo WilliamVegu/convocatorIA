@@ -61,19 +61,19 @@ def render_login_page() -> None:
         c1, c2, c3, c4 = st.columns(4)
 
         with c1:
-            if st.button("👑 Head of TA\n(admin.ta@tcs.com)", use_container_width=True):
+            if st.button("👑 Head of TA (Admin)", use_container_width=True, help="admin.ta@tcs.com"):
                 _quick_login("admin.ta@tcs.com", "Password123!")
 
         with c2:
-            if st.button("🎯 Senior Recruiter\n(recruiter.lead@tcs.com)", use_container_width=True):
+            if st.button("🎯 Senior Recruiter", use_container_width=True, help="recruiter.lead@tcs.com"):
                 _quick_login("recruiter.lead@tcs.com", "Password123!")
 
         with c3:
-            if st.button("📋 Coordinator\n(coordinator.tcs@tcs.com)", use_container_width=True):
+            if st.button("📋 Coordinator", use_container_width=True, help="coordinator.tcs@tcs.com"):
                 _quick_login("coordinator.tcs@tcs.com", "Password123!")
 
         with c4:
-            if st.button("🛡️ Compliance Officer\n(compliance.officer@tcs.com)", use_container_width=True):
+            if st.button("🛡️ Compliance Officer", use_container_width=True, help="compliance.officer@tcs.com"):
                 _quick_login("compliance.officer@tcs.com", "Password123!")
 
     with tab_register:

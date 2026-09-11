@@ -81,17 +81,13 @@ def _render_formulario_registro() -> None:
             alm_svc = AlumniService(alm_repo)
             boomerang = alm_svc.detect_boomerang(dni=dni_input)
             if boomerang.get("es_boomerang"):
-                badge_type = "green" if boomerang.get("elegible_recontratacion") else "red"
-                st.markdown(
-                    f"""
-                    <div style="background-color: #F3E8FF; border-left: 5px solid #9B59B6; padding: 12px; border-radius: 6px; margin-bottom: 12px;">
-                        <span style="font-weight: 700; color: #7E22CE;">🟣 CANDIDATO BOOMERANG DETECTADO:</span> Ex-colaborador TCS Perú<br/>
-                        <b>Cuenta / Proyecto anterior:</b> {boomerang.get('ultima_cuenta_proyecto', 'N/A')} ({boomerang.get('fecha_ingreso', '')} al {boomerang.get('fecha_cese', '')})<br/>
-                        <b>Estatus Recontratación:</b> {render_badge(boomerang.get('estatus_recontratacion', ''), badge_type)} | <i>{boomerang.get('motivo_desvinculacion', '')}</i><br/>
-                        <small style="color: #6B21A8;">⚠️ Alerta de Ahorro: Este candidato es patrimonio TCS. No procede pago de comisión externa de agencia.</small>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
+                st.warning(
+                    f"🟣 **CANDIDATO BOOMERANG DETECTADO (Ex-colaborador TCS Perú)**\n\n"
+                    f"• **Cuenta / Proyecto anterior:** {boomerang.get('ultima_cuenta_proyecto', 'N/A')} "
+                    f"({boomerang.get('fecha_ingreso', '')} al {boomerang.get('fecha_cese', '')})\n"
+                    f"• **Estatus Recontratación:** `{boomerang.get('estatus_recontratacion', '')}` | "
+                    f"*{boomerang.get('motivo_desvinculacion', '')}*\n\n"
+                    f"⚠️ *Alerta de Ahorro: Este candidato es patrimonio TCS. No procede pago de comisión externa de agencia.*"
                 )
 
     # Personal data fields
@@ -322,7 +318,12 @@ def _render_cartera_candidatos() -> None:
         st.markdown("---")
         st.markdown("#### 📜 Línea de Tiempo & Trazabilidad de Auditoría")
         cand_ids = [c.id for c in candidatos]
-        selected_cid = st.selectbox("Seleccione un Candidato para inspeccionar su historial inmutable:", cand_ids)
+        cand_map = {c.id: f"{c.nombres_completos} (DNI: {c.numero_documento})" for c in candidatos}
+        selected_cid = st.selectbox(
+            "Seleccione un Candidato para inspeccionar su historial inmutable:",
+            cand_ids,
+            format_func=lambda cid: cand_map.get(cid, cid),
+        )
 
         if selected_cid:
             audit_events = audit_repo.list_by_entity("Candidato", selected_cid)

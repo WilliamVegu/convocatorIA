@@ -8,15 +8,13 @@ import streamlit as st
 
 TCS_COLORS = {
     "deep_navy": "#0A192F",
-    "navy_surface": "#001E3C",
+    "navy_surface": "#1C2541",
     "vibrant_blue": "#0076CE",
     "cyan_accent": "#00B4D8",
-    "magenta_accent": "#E91E63",
-    "bg_neutral": "#F8FAFC",
-    "card_bg": "#FFFFFF",
-    "border": "#E2E8F0",
-    "text_primary": "#0F172A",
-    "text_secondary": "#475569",
+    "card_bg": "#1C2541",
+    "border": "#334155",
+    "text_primary": "#F8FAFC",
+    "text_secondary": "#94A3B8",
     # Traffic light semaphores
     "green": "#2ECC71",
     "yellow": "#F1C40F",
@@ -25,139 +23,151 @@ TCS_COLORS = {
 }
 
 
-def get_logo_base64() -> Optional[str]:
-    """Load assets/tcs_logo.png as base64 string for direct HTML embedding."""
+def get_logo_base64() -> str:
+    """Return base64-encoded string of TCS logo for embedding."""
     logo_path = os.path.join(os.getcwd(), "assets", "tcs_logo.png")
     if os.path.exists(logo_path):
-        try:
-            with open(logo_path, "rb") as f:
-                return base64.b64encode(f.read()).decode()
-        except Exception:
-            return None
-    return None
+        with open(logo_path, "rb") as f:
+            return base64.b64encode(f.read()).decode("utf-8")
+    return ""
 
 
 def apply_theme() -> None:
     """Inject corporate CSS stylesheet into Streamlit."""
-    custom_css = f"""
+    custom_css = """
     <style>
-        /* Main page background */
-        .stApp {{
-            background-color: {TCS_COLORS["bg_neutral"]};
-            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
-            color: {TCS_COLORS["text_primary"]};
-        }}
+        /* Typography & Smooth Rendering */
+        html, body, [class*="css"] {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
 
-        /* Header Bar */
-        .tcs-header-container {{
-            background: linear-gradient(135deg, {TCS_COLORS["deep_navy"]} 0%, {TCS_COLORS["navy_surface"]} 100%);
-            padding: 1rem 1.75rem;
-            border-radius: 12px;
-            margin-bottom: 1.5rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            color: #FFFFFF;
-            box-shadow: 0 4px 14px rgba(10, 25, 47, 0.15);
-        }}
-
-        .tcs-header-title {{
-            font-size: 1.4rem;
-            font-weight: 700;
-            letter-spacing: -0.5px;
-            margin: 0;
-            color: #FFFFFF;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }}
-
-        .tcs-header-subtitle {{
-            font-size: 0.85rem;
-            color: {TCS_COLORS["cyan_accent"]};
-            margin-top: 4px;
-            font-weight: 500;
-        }}
-
-        /* Cards and Containers */
-        .tcs-card {{
-            background-color: {TCS_COLORS["card_bg"]};
-            border: 1px solid {TCS_COLORS["border"]};
-            border-radius: 10px;
-            padding: 1.25rem;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-            margin-bottom: 1rem;
-        }}
+        /* Card & Metric container styling */
+        div[data-testid="stMetric"] {
+            background-color: #1C2541 !important;
+            border: 1px solid #334155 !important;
+            border-radius: 8px !important;
+            padding: 14px 18px !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
+        }
+        div[data-testid="stMetricLabel"] {
+            color: #94A3B8 !important;
+            font-size: 0.88rem !important;
+            font-weight: 600 !important;
+            letter-spacing: 0.2px;
+        }
+        div[data-testid="stMetricValue"] {
+            color: #38BDF8 !important;
+            font-weight: 700 !important;
+            font-size: 1.6rem !important;
+        }
 
         /* Buttons */
-        .stButton>button {{
-            background-color: {TCS_COLORS["vibrant_blue"]};
-            color: #FFFFFF;
-            border-radius: 6px;
-            font-weight: 600;
-            border: none;
-            padding: 0.5rem 1.25rem;
-            transition: all 0.2s ease-in-out;
-        }}
-        .stButton>button:hover {{
-            background-color: #005FA3;
-            box-shadow: 0 4px 12px rgba(0, 118, 206, 0.25);
-            color: #FFFFFF;
-        }}
+        div.stButton > button {
+            background: linear-gradient(135deg, #0076CE 0%, #00B4D8 100%) !important;
+            color: #FFFFFF !important;
+            border: none !important;
+            border-radius: 6px !important;
+            font-weight: 600 !important;
+            padding: 0.55rem 1.25rem !important;
+            box-shadow: 0 2px 6px rgba(0, 180, 216, 0.2) !important;
+            transition: all 0.2s ease-in-out !important;
+        }
+        div.stButton > button:hover {
+            background: linear-gradient(135deg, #005FA3 0%, #0096B4 100%) !important;
+            box-shadow: 0 4px 14px rgba(0, 180, 216, 0.4) !important;
+            color: #FFFFFF !important;
+            transform: translateY(-1px);
+        }
+        div.stButton > button:active {
+            transform: translateY(0);
+        }
+        div.stButton > button:disabled {
+            background: #334155 !important;
+            color: #64748B !important;
+            cursor: not-allowed !important;
+            transform: none !important;
+            box-shadow: none !important;
+        }
 
-        /* Secondary & Danger buttons */
-        .stButton>button:disabled {{
-            background-color: #CBD5E1 !important;
+        /* Form Inputs & Selects */
+        div[data-testid="stTextInput"] input,
+        div[data-testid="stNumberInput"] input,
+        div[data-testid="stTextArea"] textarea,
+        div[data-testid="stSelectbox"] div[data-baseweb="select"] {
+            background-color: #162032 !important;
+            color: #F8FAFC !important;
+            border: 1px solid #334155 !important;
+            border-radius: 6px !important;
+            font-size: 0.92rem !important;
+        }
+        div[data-testid="stTextInput"] input:focus,
+        div[data-testid="stNumberInput"] input:focus,
+        div[data-testid="stTextArea"] textarea:focus {
+            border-color: #00B4D8 !important;
+            box-shadow: 0 0 0 2px rgba(0, 180, 216, 0.25) !important;
+        }
+
+        /* Tabs */
+        button[data-baseweb="tab"] {
+            font-size: 0.95rem !important;
+            font-weight: 600 !important;
             color: #94A3B8 !important;
-            cursor: not-allowed;
-        }}
+            padding: 8px 16px !important;
+        }
+        button[data-baseweb="tab"][aria-selected="true"] {
+            color: #00B4D8 !important;
+            border-bottom-color: #00B4D8 !important;
+            font-weight: 700 !important;
+        }
 
-        /* Metric cards */
-        div[data-testid="stMetricValue"] {{
-            color: {TCS_COLORS["deep_navy"]};
-            font-weight: 700;
-        }}
+        /* Dataframe / Tables */
+        div[data-testid="stDataFrame"] {
+            border: 1px solid #334155 !important;
+            border-radius: 8px !important;
+            overflow: hidden !important;
+        }
 
-        /* Badges */
-        .tcs-badge {{
+        /* Callouts / Alerts */
+        div[data-testid="stAlert"] {
+            border-radius: 8px !important;
+            border: 1px solid #334155 !important;
+            background-color: #162032 !important;
+            color: #F8FAFC !important;
+        }
+
+        /* Corporate Badges */
+        .tcs-badge {
             display: inline-block;
-            padding: 4px 10px;
-            border-radius: 20px;
+            padding: 4px 12px;
+            border-radius: 12px;
             font-size: 0.78rem;
             font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }}
-        .tcs-badge-purple {{
-            background-color: #F3E8FF;
-            color: #7E22CE;
-            border: 1px solid #D8B4FE;
-        }}
-        .tcs-badge-green {{
-            background-color: #DCFCE7;
-            color: #15803D;
-            border: 1px solid #86EFAC;
-        }}
-        .tcs-badge-yellow {{
-            background-color: #FEF9C3;
-            color: #A16207;
-            border: 1px solid #FDE047;
-        }}
-        .tcs-badge-red {{
-            background-color: #FEE2E2;
-            color: #B91C1C;
-            border: 1px solid #FCA5A5;
-        }}
-        .tcs-badge-blue {{
-            background-color: #E0F2FE;
-            color: #0369A1;
-            border: 1px solid #7DD3FC;
-        }}
-        .tcs-badge-gray {{
-            background-color: #F1F5F9;
-            color: #475569;
-            border: 1px solid #CBD5E1;
-        }}
+            letter-spacing: 0.3px;
+        }
+        .tcs-badge-purple { background-color: rgba(168, 85, 247, 0.25); color: #C084FC; border: 1px solid #A855F7; }
+        .tcs-badge-green  { background-color: rgba(34, 197, 94, 0.25);  color: #4ADE80; border: 1px solid #22C55E; }
+        .tcs-badge-yellow { background-color: rgba(234, 179, 8, 0.25);  color: #FACC15; border: 1px solid #EAB308; }
+        .tcs-badge-red    { background-color: rgba(239, 68, 68, 0.25);   color: #F87171; border: 1px solid #EF4444; }
+        .tcs-badge-blue   { background-color: rgba(56, 189, 248, 0.25);  color: #38BDF8; border: 1px solid #38BDF8; }
+        .tcs-badge-gray   { background-color: rgba(148, 163, 184, 0.25); color: #CBD5E1; border: 1px solid #64748B; }
+
+        /* Custom Modern Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0B132B;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #00B4D8;
+        }
     </style>
     """
     st.markdown(custom_css, unsafe_allow_html=True)
@@ -174,38 +184,38 @@ def render_header(
     current_user: Optional[dict] = None,
     on_logout_callback=None,
 ) -> None:
-    """Render top branding bar with logo, user info and logout button."""
-    logo_b64 = get_logo_base64()
-    logo_html = ""
-    if logo_b64:
-        logo_html = f'<img src="data:image/png;base64,{logo_b64}" style="height: 38px; margin-right: 12px; vertical-align: middle; filter: brightness(0) invert(1);" />'
+    """Render top branding bar with official TCS logo, application title and active user info."""
+    logo_path = os.path.join(os.getcwd(), "assets", "tcs_logo.png")
 
-    user_info_html = ""
-    role_badge = ""
-    if current_user:
-        rol = current_user.get("rol", "Compliance_Officer")
-        rol_display = rol.replace("_", " ")
-        badge_style = "purple" if "Head" in rol else ("blue" if "Recruiter" in rol else ("yellow" if "Coordinator" in rol else "gray"))
-        role_badge = render_badge(rol_display, badge_style)
-        user_info_html = f"""
-        <div style="text-align: right;">
-            <div style="font-weight: 600; font-size: 0.9rem; color: #FFFFFF;">{current_user.get('nombres_completos', '')}</div>
-            <div style="font-size: 0.75rem; color: #94A3B8;">{current_user.get('email', '')} &nbsp;|&nbsp; {role_badge}</div>
-        </div>
-        """
+    c_logo, c_title, c_user = st.columns([1.5, 4.5, 3.5])
 
-    header_html = f"""
-    <div class="tcs-header-container">
-        <div style="display: flex; align-items: center;">
-            {logo_html}
-            <div>
-                <h1 class="tcs-header-title">ATS TCS Perú <span style="font-size: 0.75rem; background: rgba(0,180,216,0.2); border: 1px solid #00B4D8; color: #00B4D8; padding: 2px 8px; border-radius: 4px; font-weight: 600;">CORE MVP</span></h1>
-                <div class="tcs-header-subtitle">Talent Acquisition Engine &amp; Candidate Lifecycle Management</div>
-            </div>
-        </div>
-        <div>
-            {user_info_html}
-        </div>
-    </div>
-    """
-    st.markdown(header_html, unsafe_allow_html=True)
+    with c_logo:
+        if os.path.exists(logo_path):
+            st.image(logo_path, width=160)
+
+    with c_title:
+        st.markdown(
+            "<h2 style='margin: 0; padding: 0; color: #F8FAFC; font-weight: 700;'>ATS TCS Perú "
+            "<span style='font-size: 0.75rem; background: #00B4D8; color: #0B132B; padding: 2px 8px; "
+            "border-radius: 4px; font-weight: 700; vertical-align: middle;'>CORE MVP</span></h2>"
+            "<p style='margin: 2px 0 0 0; font-size: 0.82rem; color: #94A3B8; font-weight: 500;'>"
+            "Talent Acquisition Engine • Candidate Lifecycle Management</p>",
+            unsafe_allow_html=True,
+        )
+
+    with c_user:
+        if current_user:
+            rol = current_user.get("rol", "Compliance_Officer").replace("_", " ")
+            email = current_user.get("email", "")
+            nombre = current_user.get("nombres_completos", "")
+            st.markdown(
+                f"<div style='text-align: right; padding-top: 4px;'>"
+                f"<div style='font-weight: 600; color: #F8FAFC; font-size: 0.92rem;'>👤 {nombre}</div>"
+                f"<div style='font-size: 0.78rem; color: #00B4D8; margin-top: 2px;'>"
+                f"<b>{rol}</b> &nbsp;|&nbsp; <span style='color: #94A3B8;'>{email}</span></div>"
+                f"</div>",
+                unsafe_allow_html=True,
+            )
+
+    st.markdown("<hr style='margin: 8px 0 16px 0; border: none; border-top: 1px solid #334155;'/>", unsafe_allow_html=True)
+
