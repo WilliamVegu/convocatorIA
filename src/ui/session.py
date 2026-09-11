@@ -86,11 +86,11 @@ def logout(reason: str = "Cierre voluntario de sesión") -> None:
                     usuario_id=user_id,
                     usuario_email=user_email,
                     rol_en_momento=user_role or "Compliance_Officer",
-                    tipo_accion="Cierre_Sesion",
-                    entidad_objeto="Sesion",
+                    tipo_accion="Autenticacion",
+                    entidad_objeto="Usuario",
                     registro_id=user_id,
                     version_registro=1,
-                    justificacion_operativa=reason,
+                    justificacion_operativa=f"Cierre de sesion: {reason}",
                 )
                 db.commit()
         except Exception:
@@ -160,8 +160,8 @@ def enforce_write_permission(action_name: str = "esta acción") -> bool:
                     usuario_email=user["email"],
                     rol_en_momento=user["rol"],
                     tipo_accion="Acceso_Denegado",
-                    entidad_objeto="Operacion",
-                    registro_id="write_blocked",
+                    entidad_objeto="Usuario",
+                    registro_id=user["user_id"],
                     version_registro=1,
                     justificacion_operativa=f"Intento de ejecucion de {action_name} sin permisos de escritura.",
                 )

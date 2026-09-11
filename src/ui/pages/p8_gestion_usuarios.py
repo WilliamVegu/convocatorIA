@@ -119,13 +119,10 @@ def render_gestion_usuarios_page() -> None:
 
                 if st.button("🔓 Desbloquear Cuenta y Restablecer Intentos", use_container_width=True):
                     try:
-                        user_repo.reset_failed_attempts(locked_uid)
-                        audit_svc.record_security_event(
-                            usuario_id=user_id,
-                            usuario_email=user_email,
-                            rol_en_momento=user_role,
-                            tipo_accion="Modificacion",
-                            justificacion=f"Desbloqueo manual de cuenta ejecutado por Head of TA para usuario {locked_uid}",
+                        auth_svc.unlock_user_account(
+                            admin_user_id=user_id,
+                            target_user_id=locked_uid,
+                            justification=f"Desbloqueo manual de cuenta ejecutado por Head of TA ({user_email})",
                         )
                         db.commit()
                         st.success("✅ Cuenta desbloqueada y contador de intentos reiniciado a cero.")

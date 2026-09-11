@@ -79,10 +79,10 @@ def render_simulador_ctc_page() -> None:
             )
 
         # Semaphore card
-        semaforo = calc_result["semaforo_viabilidad"]
-        badge_type = "green" if semaforo == "Dentro_de_Presupuesto" else (
-            "yellow" if semaforo == "Requiere_Aprobacion_Especial" else (
-                "red" if semaforo == "Fuera_de_Banda" else "gray"
+        semaforo = calc_result.get("semaforo_presupuestal", calc_result.get("semaforo_viabilidad", "Pendiente_Presupuesto"))
+        badge_type = "green" if semaforo == "Dentro_Presupuesto" else (
+            "yellow" if semaforo == "Requiere_Aprobacion" else (
+                "red" if semaforo == "Fuera_Banda" else "gray"
             )
         )
         st.markdown(
@@ -96,6 +96,9 @@ def render_simulador_ctc_page() -> None:
         )
 
         # Atypical salary warnings
+        warn_atipico = calc_result.get("advertencia_rango_atipico")
+        if warn_atipico:
+            st.warning(f"⚠️ {warn_atipico}")
         for warn in calc_result.get("advertencias_rango", []):
             st.warning(f"⚠️ {warn}")
 
@@ -145,7 +148,7 @@ def render_simulador_ctc_page() -> None:
                 st.error(f"Error al guardar evaluación CTC: {e}")
 
         # Head of TA Approval section if special approval needed
-        if semaforo == "Requiere_Aprobacion_Especial":
+        if semaforo in {"Requiere_Aprobacion", "Fuera_Banda", "Requiere_Aprobacion_Especial"}:
             st.markdown("---")
             st.markdown("##### ✍️ Trámite de Excepción Salarial")
             if is_head_of_ta():
@@ -161,15 +164,17 @@ def render_simulador_ctc_page() -> None:
                             # Find latest CTC eval for this post
                             evals = post_repo.get_ctc_evals(selected_p_id)
                             if evals:
-                                ctc_svc.approve_exception(
+                                ctc_svc.approve_ctc_exception(
                                     approver_user_id=user_id,
                                     approver_email=user_email,
                                     approver_role=user_role,
-                                    evaluacion_ctc_id=evals[0].id,
-                                    justificacion=just_aprob or "Aprobación de excepción por Head of TA.",
+                                    postulacion_id=selected_p_id,
+                                    justification=just_aprob or "Aprobación de excepción por Head of TA.",
                                 )
                                 db.commit()
                                 st.success("🎉 Excepción presupuestal aprobada y auditada.")
+                            else:
+                                st.warning("Guarde primero la simulación antes de aprobar la excepción.")
                     except Exception as e:
                         st.error(f"Error aprobando excepción: {e}")
             else:

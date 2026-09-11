@@ -61,9 +61,9 @@ def render_screening_page() -> None:
     with st.form("form_screening_hitl"):
         c1, c2 = st.columns(2)
         with c1:
-            dim1 = st.selectbox("1. Disponibilidad de Incorporación", ["Inmediata", "1 semana", "2 semanas", "1 mes", "Negociable"])
+            dim1 = st.selectbox("1. Disponibilidad de Incorporación", ["Inmediata", "1 semana", "2 semanas", "1 mes", "Mayor a 1 mes"])
             dim3 = st.number_input("3. Expectativa Salarial Declarada (S/.)", min_value=0.0, value=6500.0, step=100.0)
-            dim5 = st.selectbox("5. Modalidad Aceptada", ["Híbrido (2 días oficina)", "Híbrido (3 días oficina)", "Remoto 100%", "Presencial 100%"])
+            dim5 = st.selectbox("5. Modalidad Aceptada", ["Híbrido", "Remoto", "Presencial"])
 
         with c2:
             dim4 = st.selectbox("4. Nivel de Interés en la Vacante y TCS", ["Alto", "Medio", "Bajo"])
@@ -73,9 +73,19 @@ def render_screening_page() -> None:
                 client_or_workplace=selected_post.cliente_cuenta,
                 modalidad=dim5,
             )
-            dim6_options = ["Viable", "Alerta_Distancia_Critica", "No_Aplica_Remoto"]
+            dim6_options = ["Viable_Cercano", "Viable_Con_Conmutacion", "Alerta_Distancia_Critica"]
+            dim6_labels = {
+                "Viable_Cercano": "Viable Cercano (<45 min)",
+                "Viable_Con_Conmutacion": "Viable con Conmutación (45-75 min)",
+                "Alerta_Distancia_Critica": "Alerta Distancia Crítica (>90 min)",
+            }
             default_ix = dim6_options.index(auto_viab) if auto_viab in dim6_options else 0
-            dim6 = st.selectbox("6. Viabilidad de Traslado (Conmutación)", dim6_options, index=default_ix)
+            dim6 = st.selectbox(
+                "6. Viabilidad de Traslado (Conmutación)",
+                dim6_options,
+                index=default_ix,
+                format_func=lambda x: dim6_labels.get(x, x),
+            )
 
         if "Alerta_Distancia_Critica" in (dim6, auto_viab) and "Remoto" not in dim5:
             st.warning(
@@ -97,10 +107,15 @@ def render_screening_page() -> None:
         dictamen = st.selectbox(
             "Decisión del Reclutador Responsable:",
             [
-                "Avanza a Entrevista Técnica",
-                "En Espera / Cartera de Talento",
-                "Descartado en Screening Telefónico",
+                "Avanza_Entrevista_Tecnica",
+                "No_Apto_Filtro_Inicial",
+                "Enfriar_En_Cartera",
             ],
+            format_func=lambda x: {
+                "Avanza_Entrevista_Tecnica": "Avanza a Entrevista Técnica (Aprobado)",
+                "No_Apto_Filtro_Inicial": "No Apto en Filtro Inicial (Descartado)",
+                "Enfriar_En_Cartera": "Enfriar en Cartera de Talento (En Espera)",
+            }.get(x, x),
         )
 
         justificacion = st.text_input("Comentarios u observaciones adicionales del dictamen:")

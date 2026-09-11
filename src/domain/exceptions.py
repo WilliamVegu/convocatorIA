@@ -44,3 +44,13 @@ class AuditIntegrityError(DomainException):
 class FinancialValidationError(DomainException):
     """Raised when financial inputs are mathematically invalid or out of bounds."""
     pass
+
+
+class InvalidDomainError(DomainException, ValueError):
+    """Raised when an email domain does not match institutional domain (@tcs.com)."""
+    pass
+
+
+class WeakPasswordError(DomainException, ValueError):
+    """Raised when a password fails complexity and security policies."""
+    pass

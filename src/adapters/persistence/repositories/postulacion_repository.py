@@ -200,6 +200,11 @@ class PostulacionRepository:
             select(EvaluacionCTCModel).where(EvaluacionCTCModel.postulacion_id == postulacion_id)
         ).scalar_one_or_none()
 
+    def get_ctc_evals(self, postulacion_id: str) -> List[EvaluacionCTCModel]:
+        """Return list of CTC evaluations for postulation."""
+        item = self.get_ctc_by_postulacion(postulacion_id)
+        return [item] if item else []
+
     # Compliance
     def create_compliance(
         self,

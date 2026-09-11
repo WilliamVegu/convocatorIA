@@ -118,3 +118,32 @@ class CTCService:
         )
 
         return eval_ctc
+
+    def approve_exception(
+        self,
+        approver_user_id: str,
+        approver_email: str,
+        approver_role: str,
+        postulacion_id: Optional[str] = None,
+        evaluacion_ctc_id: Optional[str] = None,
+        justificacion: str = "Aprobación de excepción por Head of TA.",
+    ) -> EvaluacionCTCModel:
+        """Approve salary variance using postulacion_id or evaluacion_ctc_id."""
+        target_post_id = postulacion_id
+        if not target_post_id and evaluacion_ctc_id:
+            eval_ctc = self.postulacion_repo.session.get(EvaluacionCTCModel, evaluacion_ctc_id)
+            if eval_ctc:
+                target_post_id = eval_ctc.postulacion_id
+            else:
+                raise EntityNotFoundError(f"Evaluación CTC {evaluacion_ctc_id} no encontrada.")
+
+        if not target_post_id:
+            raise ValueError("Debe proporcionar postulacion_id o evaluacion_ctc_id.")
+
+        return self.approve_ctc_exception(
+            approver_user_id=approver_user_id,
+            approver_email=approver_email,
+            approver_role=approver_role,
+            postulacion_id=target_post_id,
+            justification=justificacion,
+        )

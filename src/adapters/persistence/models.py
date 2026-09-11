@@ -407,3 +407,11 @@ class CacheDNIReniecModel(Base):
     distrito = Column(String(100), nullable=True)
     direccion = Column(String(255), nullable=True)
     cached_at = Column(DateTime, nullable=False, default=current_utc_time)
+
+
+# Aliases for model names matching SQL tables and alternative imports
+LotePlanillaAdeccoModel = LoteAdeccoModel
+ReporteCarteraExclusionesModel = ReporteExclusionesModel
+ScreeningTecnicoModel = ScreeningModel
+EvaluacionFinancieraCTCModel = EvaluacionCTCModel
+ComplianceVerificacionesModel = ComplianceModel

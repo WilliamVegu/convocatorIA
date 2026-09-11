@@ -266,13 +266,38 @@ class AdeccoService:
                 imported_count += 1
 
             session.commit()
+
+            # Record mutation audit event for imported candidate batch
+            try:
+                self.audit_service.record_mutation(
+                    usuario_id=actor_user_id,
+                    usuario_email=actor_email,
+                    rol_en_momento=actor_role,
+                    tipo_accion="Carga_Archivo",
+                    entidad_objeto="Planilla_Adecco",
+                    registro_id=lote_id,
+                    valores_nuevos={
+                        "candidatos_importados": imported_count,
+                        "cliente_cuenta": cliente_cuenta,
+                        "rgs_vacante_id": rgs_vacante_id,
+                    },
+                    justificacion_operativa=f"Importacion masiva de {imported_count} candidatos limpios del lote Adecco {lote_id}",
+                )
+                session.commit()
+            except Exception:
+                pass
+
             return imported_count
 
         except Exception as e:
             session.rollback()
-            # Update lote status to Fallido_Rollback
-            lote = self.adecco_repo.get_lote_by_id(lote_id)
-            if lote:
-                lote.estado_procesamiento = "Fallido_Rollback"
-                session.commit()
+            # Update lote status to Fallido_Rollback if lote exists
+            try:
+                lote = self.adecco_repo.get_lote_by_id(lote_id)
+                if lote:
+                    lote.estado_procesamiento = "Fallido_Rollback"
+                    session.commit()
+            except Exception:
+                session.rollback()
+
             raise RuntimeError(f"Fallo en importación atómica del lote Adecco; rollback ejecutado: {e}")

@@ -50,29 +50,66 @@ class ScreeningService:
         if not cand:
             raise EntityNotFoundError(f"Candidato asociado a postulación {postulacion_id} no encontrado.")
 
+        # Normalize dim5 modality to check constraint ('Híbrido', 'Remoto', 'Presencial')
+        m_lower = dim5_modalidad_aceptada.lower()
+        if "remoto" in m_lower:
+            norm_modalidad = "Remoto"
+        elif "presencial" in m_lower:
+            norm_modalidad = "Presencial"
+        else:
+            norm_modalidad = "Híbrido"
+
         # Calculate automatic commute feasibility
         auto_viabilidad, alerta_nota = evaluate_commute(
             residence_district=cand.distrito_residencia,
             client_or_workplace=post.cliente_cuenta,
-            modalidad=dim5_modalidad_aceptada,
+            modalidad=norm_modalidad,
         )
 
-        dim6_viabilidad = dim6_override_viabilidad or auto_viabilidad
+        # Normalize dim6 viabilidad
+        raw_v = (dim6_override_viabilidad or auto_viabilidad).lower()
+        if "critica" in raw_v:
+            dim6_viabilidad = "Alerta_Distancia_Critica"
+        elif "conmutacion" in raw_v or "viable" in raw_v and "cercano" not in raw_v:
+            dim6_viabilidad = "Viable_Con_Conmutacion"
+        else:
+            dim6_viabilidad = "Viable_Cercano"
+
+        # Normalize dim1 disponibilidad
+        d1_raw = dim1_disponibilidad.strip()
+        d1_map = {
+            "Inmediata": "Inmediata",
+            "1 semana": "1_semana",
+            "2 semanas": "2_semanas",
+            "1 mes": "1_mes",
+            "Mayor a 1 mes": "Mayor_a_1_mes",
+            "Negociable": "1_mes",
+        }
+        dim1_norm = d1_map.get(d1_raw, d1_raw)
+
+        # Normalize dictamen humano
+        d_lower = dictamen_humano.lower()
+        if "avanza" in d_lower:
+            norm_dictamen = "Avanza_Entrevista_Tecnica"
+        elif "enfriar" in d_lower or "espera" in d_lower or "cartera" in d_lower:
+            norm_dictamen = "Enfriar_En_Cartera"
+        else:
+            norm_dictamen = "No_Apto_Filtro_Inicial"
 
         screening_id = f"scr-{uuid.uuid4()}"
         screening = self.postulacion_repo.create_screening(
             screening_id=screening_id,
             postulacion_id=postulacion_id,
             evaluador_user_id=evaluador_user_id,
-            dim1_disponibilidad=dim1_disponibilidad,
+            dim1_disponibilidad=dim1_norm,
             dim2_resumen_tecnico=dim2_resumen_tecnico,
             dim3_expectativa_declarada=dim3_expectativa_declarada,
             dim4_interes_vacante=dim4_interes_vacante,
-            dim5_modalidad_aceptada=dim5_modalidad_aceptada,
+            dim5_modalidad_aceptada=norm_modalidad,
             dim6_viabilidad_traslado=dim6_viabilidad,
             dim6_alerta_distancia_nota=alerta_nota,
             dim7_impresion_general=dim7_impresion_general,
-            dictamen_humano=dictamen_humano,
+            dictamen_humano=norm_dictamen,
         )
 
         # Update application funnel state based on human decision

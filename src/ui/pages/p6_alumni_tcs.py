@@ -88,7 +88,16 @@ def _render_registro_alumni() -> None:
                 "Motivo de Desvinculación:",
                 ["Renuncia Voluntaria - Mejor Oferta", "Fin de Proyecto / Contrato", "Mutuo Disenso", "Despido / Falta Grave", "Otro"],
             )
-            estatus = st.selectbox("Estatus de Recontratabilidad:", ["Rehire_Eligible", "Do_Not_Rehire", "Requiere_Aprobacion_Especial"])
+            estatus_labels = {
+                "Rehire_Eligible": "Elegible para Recontratación (Rehire_Eligible)",
+                "Do_Not_Rehire": "No Recontratable (Do_Not_Rehire)",
+                "Requiere_Aprobacion_RRHH": "Requiere Aprobación RRHH (Requiere_Aprobacion_RRHH)",
+            }
+            estatus = st.selectbox(
+                "Estatus de Recontratabilidad:",
+                ["Rehire_Eligible", "Do_Not_Rehire", "Requiere_Aprobacion_RRHH"],
+                format_func=lambda x: estatus_labels.get(x, x),
+            )
 
         notas_comp = st.text_area("Notas u Observaciones de Compliance:")
 
@@ -121,7 +130,6 @@ def _render_registro_alumni() -> None:
                         ultima_cuenta_proyecto=cuenta or None,
                         motivo_desvinculacion=motivo,
                         estatus_recontratacion=estatus,
-                        notas_compliance=notas_comp or None,
                     )
 
                     audit_svc.record_mutation(

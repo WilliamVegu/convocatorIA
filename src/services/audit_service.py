@@ -144,3 +144,46 @@ class AuditService(AuditPort):
             limit=limit,
             offset=offset,
         )
+
+    def list_by_entity(self, entidad_objeto: str, registro_id: str) -> List[BitacoraAuditoriaModel]:
+        return self.repository.list_by_entity(entidad_objeto, registro_id)
+
+    def log_event(
+        self,
+        usuario_id: str,
+        usuario_email: str,
+        rol_en_momento: str,
+        tipo_accion: str,
+        entidad_objeto: str,
+        registro_id: str,
+        version_registro: Optional[int] = None,
+        justificacion_operativa: Optional[str] = None,
+        valores_previos: Optional[Dict[str, Any] | str] = None,
+        valores_nuevos: Optional[Dict[str, Any] | str] = None,
+    ) -> str:
+        """Universal event logging helper that ensures DB check constraints are respected."""
+        valid_actions = {
+            "Creacion", "Modificacion", "Carga_Archivo", "Exportacion",
+            "Transicion_Estado", "Autenticacion", "Acceso_Denegado",
+            "Modificacion_Rol", "Desbloqueo_Manual", "Fallo_Carga",
+        }
+        valid_entities = {
+            "Candidato", "Postulacion", "Screening", "Evaluacion_CTC",
+            "Compliance", "Documento_CV", "Planilla_Adecco",
+            "Reporte_Cartera_Exclusiones", "Usuario",
+        }
+        normalized_action = tipo_accion if tipo_accion in valid_actions else "Autenticacion"
+        normalized_entity = entidad_objeto if entidad_objeto in valid_entities else "Usuario"
+
+        return self.record_mutation(
+            usuario_id=usuario_id,
+            usuario_email=usuario_email,
+            rol_en_momento=rol_en_momento,
+            tipo_accion=normalized_action,
+            entidad_objeto=normalized_entity,
+            registro_id=registro_id,
+            version_registro=version_registro,
+            valores_previos=valores_previos if isinstance(valores_previos, dict) else None,
+            valores_nuevos=valores_nuevos if isinstance(valores_nuevos, dict) else None,
+            justificacion_operativa=justificacion_operativa,
+        )

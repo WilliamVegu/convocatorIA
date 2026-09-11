@@ -51,6 +51,24 @@ class CandidatoRepository:
         )
         return list(self.session.execute(stmt).scalars().all())
 
+    def search_by_name(self, query: str) -> List[CandidatoModel]:
+        """Search candidates by DNI, email, phone, or name."""
+        q = query.strip()
+        if not q:
+            return self.list_all(limit=50)
+        if q.isdigit() and len(q) == 8:
+            single = self.get_by_dni(q)
+            if single:
+                return [single]
+        if "@" in q:
+            single = self.get_by_email(q)
+            if single:
+                return [single]
+        import unicodedata
+        nfkd = unicodedata.normalize("NFKD", q.upper())
+        clean_q = "".join(c for c in nfkd if not unicodedata.combining(c))
+        return self.search_by_normalized_name(clean_q)
+
     def create(
         self,
         candidato_id: str,

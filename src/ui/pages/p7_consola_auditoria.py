@@ -42,12 +42,12 @@ def _render_consola_auditoria() -> None:
     with c2:
         f_entidad = st.selectbox(
             "Entidad Objeto:",
-            ["Todas", "Candidato", "Postulacion", "Screening", "EvaluacionCTC", "Planilla_Adecco", "Reporte_Cartera_Exclusiones", "HistorialAlumni", "Usuario", "Sesion", "Operacion"],
+            ["Todas", "Candidato", "Postulacion", "Screening", "Evaluacion_CTC", "Compliance", "Documento_CV", "Planilla_Adecco", "Reporte_Cartera_Exclusiones", "Usuario"],
         )
     with c3:
         f_accion = st.selectbox(
             "Tipo de Acción:",
-            ["Todas", "Creacion", "Modificacion", "Eliminacion_Logica", "Acceso_Denegado", "Exportacion", "Carga_Archivo", "Cierre_Sesion", "Aprobacion_Excepcion", "Modificacion_Rol"],
+            ["Todas", "Creacion", "Modificacion", "Carga_Archivo", "Exportacion", "Transicion_Estado", "Autenticacion", "Acceso_Denegado", "Modificacion_Rol", "Desbloqueo_Manual", "Fallo_Carga"],
         )
 
     entidad_param = None if f_entidad == "Todas" else f_entidad
@@ -132,7 +132,7 @@ def _render_tablero_metricas() -> None:
         p_oferta_econ = db.execute(select(func.count(PostulacionModel.id)).where(PostulacionModel.estado_embudo == "Oferta_Economica")).scalar() or 0
         p_oferta_acept = db.execute(select(func.count(PostulacionModel.id)).where(PostulacionModel.estado_embudo == "Oferta_Aceptada")).scalar() or 0
         p_contratado = db.execute(select(func.count(PostulacionModel.id)).where(PostulacionModel.estado_embudo == "Contratado")).scalar() or 0
-        p_descartado = db.execute(select(func.count(PostulacionModel.id)).where(PostulacionModel.estado_embudo == "Descartado")).scalar() or 0
+        p_descartado = db.execute(select(func.count(PostulacionModel.id)).where(PostulacionModel.estado_embudo.like("Descartado%"))).scalar() or 0
 
         # Screenings
         total_screenings = db.execute(select(func.count(ScreeningModel.id))).scalar() or 0

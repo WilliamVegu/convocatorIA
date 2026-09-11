@@ -56,17 +56,37 @@ class HeuristicCVExtractor(CVParserPort):
     """100% offline heuristic curriculum vitae parser."""
 
     def extract_from_pdf(self, file_content_or_path: bytes | str | Path) -> Dict[str, Any]:
-        """Extract text from PDF using pypdf and parse."""
+        """Extract text from PDF using PyMuPDF (fitz) with fallback to pypdf, and parse."""
         text = ""
-        if isinstance(file_content_or_path, (str, Path)):
-            reader = pypdf.PdfReader(str(file_content_or_path))
-        else:
-            reader = pypdf.PdfReader(io.BytesIO(file_content_or_path))
+        # 1. Try PyMuPDF (fitz) first
+        try:
+            import pymupdf  # type: ignore
+            if isinstance(file_content_or_path, (str, Path)):
+                doc = pymupdf.open(str(file_content_or_path))
+            else:
+                doc = pymupdf.open(stream=file_content_or_path, filetype="pdf")
+            for page in doc:
+                t = page.get_text()
+                if t:
+                    text += t + "\n"
+            doc.close()
+        except Exception:
+            text = ""
 
-        for page in reader.pages:
-            t = page.extract_text()
-            if t:
-                text += t + "\n"
+        # 2. Fallback to pypdf if PyMuPDF extracted nothing or failed
+        if not text.strip():
+            try:
+                if isinstance(file_content_or_path, (str, Path)):
+                    reader = pypdf.PdfReader(str(file_content_or_path))
+                else:
+                    reader = pypdf.PdfReader(io.BytesIO(file_content_or_path))
+
+                for page in reader.pages:
+                    t = page.extract_text()
+                    if t:
+                        text += t + "\n"
+            except Exception:
+                pass
 
         return self.extract_from_text(text)
 

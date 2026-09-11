@@ -53,13 +53,16 @@ class AlumniService(AlumniPort):
         if record:
             return {
                 "is_alumni": True,
+                "es_boomerang": True,
                 "alumni_id": record.id,
                 "documento": record.numero_documento,
                 "nombres_completos": record.nombres_completos,
                 "estatus_recontratacion": record.estatus_recontratacion,
+                "elegible_recontratacion": record.estatus_recontratacion == "Rehire_Eligible",
                 "ultima_cuenta_proyecto": record.ultima_cuenta_proyecto,
                 "motivo_desvinculacion": record.motivo_desvinculacion,
-                "fecha_cese": record.fecha_cese,
+                "fecha_ingreso": str(record.fecha_ingreso) if record.fecha_ingreso else "",
+                "fecha_cese": str(record.fecha_cese),
                 "bloquear_comision_agencia": True,
                 "badge_color": "purple",
                 "badge_label": "Ex-Colaborador TCS (Boomerang)",
@@ -67,14 +70,26 @@ class AlumniService(AlumniPort):
 
         return {
             "is_alumni": False,
+            "es_boomerang": False,
             "alumni_id": None,
             "documento": None,
             "nombres_completos": None,
             "estatus_recontratacion": None,
+            "elegible_recontratacion": False,
             "ultima_cuenta_proyecto": None,
             "motivo_desvinculacion": None,
+            "fecha_ingreso": "",
             "fecha_cese": None,
             "bloquear_comision_agencia": False,
             "badge_color": None,
             "badge_label": None,
         }
+
+    def detect_boomerang(
+        self,
+        dni: Optional[str] = None,
+        email: Optional[str] = None,
+        nombre_completo: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Alias for detect_alumni ensuring compatibility with both terminologies."""
+        return self.detect_alumni(dni=dni, email=email, nombre_completo=nombre_completo)

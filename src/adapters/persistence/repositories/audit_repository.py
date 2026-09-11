@@ -108,3 +108,15 @@ class AuditRepository:
         return self.session.execute(
             select(BitacoraAuditoriaModel).where(BitacoraAuditoriaModel.id == log_id)
         ).scalar_one_or_none()
+
+    def list_by_entity(self, entidad_objeto: str, registro_id: str) -> List[BitacoraAuditoriaModel]:
+        """List audit events for a specific entity and record ID."""
+        stmt = (
+            select(BitacoraAuditoriaModel)
+            .where(
+                BitacoraAuditoriaModel.entidad_objeto == entidad_objeto,
+                BitacoraAuditoriaModel.registro_id == registro_id,
+            )
+            .order_by(desc(BitacoraAuditoriaModel.timestamp))
+        )
+        return list(self.session.execute(stmt).scalars().all())

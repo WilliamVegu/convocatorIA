@@ -174,8 +174,16 @@ def _render_formulario_registro() -> None:
 
     cv_info = st.session_state.get("cv_parsed_data", {})
     if cv_info:
-        st.info(f"**Habilidades detectadas:** {', '.join(cv_info.get('habilidades_tecnicas', [])) or 'No detectadas'}")
-        st.info(f"**Años de experiencia estimados:** {cv_info.get('anios_experiencia_estimados', 'N/A')}")
+        skills = cv_info.get("habilidades_tecnicas", [])
+        if skills and isinstance(skills[0], dict):
+            skills_str = ", ".join([s.get("nombre", "") for s in skills if s.get("nombre")])
+        elif skills and isinstance(skills[0], str):
+            skills_str = ", ".join(skills)
+        else:
+            skills_str = "No detectadas"
+        st.info(f"**Habilidades detectadas:** {skills_str or 'No detectadas'}")
+        anios_exp = cv_info.get("anios_experiencia_total", cv_info.get("anios_experiencia_estimados", "N/A"))
+        st.info(f"**Años de experiencia estimados:** {anios_exp}")
         st.info(f"**Idiomas detectados:** {cv_info.get('idiomas', {})}")
 
     st.markdown("#### 4. Postulación Inicial y Perfil Vacante")
@@ -233,8 +241,8 @@ def _render_formulario_registro() -> None:
                     fecha_nacimiento=fecha_nac,
                     ubigeo=ubigeo,
                     distrito_residencia=distrito,
-                    cv_resumen_tecnico=cv_info.get("resumen_ejecutivo", ""),
-                    cv_anios_experiencia=cv_info.get("anios_experiencia_estimados"),
+                    cv_resumen_tecnico=cv_info.get("resumen_profesional", cv_info.get("resumen_ejecutivo", "")),
+                    cv_anios_experiencia=cv_info.get("anios_experiencia_total", cv_info.get("anios_experiencia_estimados")),
                     cv_idiomas_json=cv_info.get("idiomas"),
                 )
 
@@ -301,7 +309,7 @@ def _render_cartera_candidatos() -> None:
                 "ID": c.id,
                 "DNI": c.numero_documento,
                 "Candidato": c.nombres_completos,
-                "Edad": f"{c.calcular_edad or 'N/A'} años",
+                "Edad": f"{c.calcular_edad() if c.fecha_nacimiento else 'N/A'} años",
                 "Teléfono E.164": c.telefono_e164,
                 "Distrito": c.distrito_residencia or "N/A",
                 "Alumni TCS": "🟣 Sí" if c.is_tcs_alumni else "No",
