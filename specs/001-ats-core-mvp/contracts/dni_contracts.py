@@ -5,7 +5,7 @@ Feature: 001-ats-core-mvp
 """
 
 from abc import ABC, abstractmethod
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from enum import Enum
 from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -48,17 +48,24 @@ class DNIResponseData(BaseModel):
     dni: str = Field(..., min_length=8, max_length=8)
     nombres: str = Field(..., min_length=1, description="Nombres de pila oficiales")
     apellido_paterno: str = Field(..., min_length=1, description="Primer apellido oficial")
-    apellido_materno: str = Field(default="", description="Segundo apellido oficial")
+    apellido_materno: Optional[str] = Field(default="", description="Segundo apellido oficial (vacío en extranjeros o casos con un solo apellido)")
     fecha_nacimiento: Optional[date] = Field(default=None, description="Fecha de nacimiento para cálculo de edad")
     ubigeo: Optional[str] = Field(default=None, max_length=6, description="Código ubigeo INEI de 6 dígitos")
     distrito: Optional[str] = Field(default=None, description="Distrito de residencia oficial")
     direccion: Optional[str] = Field(default=None, description="Dirección domiciliaria registrada")
 
+    @field_validator("apellido_materno", mode="before")
+    @classmethod
+    def normalize_apellido_materno(cls, v: Optional[str]) -> str:
+        if v is None:
+            return ""
+        return str(v).strip()
+
     @property
     def nombres_completos(self) -> str:
         partes = [self.nombres, self.apellido_paterno]
-        if self.apellido_materno:
-            partes.append(self.apellido_materno)
+        if self.apellido_materno and self.apellido_materno.strip():
+            partes.append(self.apellido_materno.strip())
         return " ".join(partes)
 
 
@@ -81,20 +88,29 @@ class DNIValidationResult(BaseModel):
         description="Indica si debe encolarse para regularización asíncrona"
     )
     mensaje_error: Optional[str] = Field(default=None, description="Mensaje explicativo ante error o indisponibilidad")
-    timestamp_consulta: datetime = Field(default_factory=datetime.utcnow)
+    timestamp_consulta: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class DNICacheEntry(BaseModel):
     """Estructura de persistencia en la tabla local cache_dni_reniec."""
+    model_config = ConfigDict(str_strip_whitespace=True)
+
     dni: str = Field(..., min_length=8, max_length=8)
     nombres: str
     apellido_paterno: str
-    apellido_materno: str = ""
+    apellido_materno: Optional[str] = ""
     fecha_nacimiento: Optional[date] = None
     ubigeo: Optional[str] = None
     distrito: Optional[str] = None
     direccion: Optional[str] = None
-    cached_at: datetime = Field(default_factory=datetime.utcnow)
+    cached_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    @field_validator("apellido_materno", mode="before")
+    @classmethod
+    def normalize_cache_apellido_materno(cls, v: Optional[str]) -> str:
+        if v is None:
+            return ""
+        return str(v).strip()
 
 
 class DNIProviderPort(ABC):

@@ -14,6 +14,7 @@ from .dni_contracts import (  # noqa: F401
 )
 from .cv_parser_contracts import (  # noqa: F401
     IdiomaNivelEnum,
+    IdiomaCompetencia,
     ModalidadLaboralEnum,
     NivelSeniorityEnum,
     HabilidadTecnica,
@@ -27,6 +28,7 @@ from .cv_parser_contracts import (  # noqa: F401
 from .adecco_contracts import (  # noqa: F401
     SemaforoClasificacionEnum,
     MotivoExclusionEnum,
+    ADECCO_COLUMN_ALIASES,
     AdeccoRowRaw,
     AdeccoNormalizedCandidate,
     AdeccoValidationItemResult,
@@ -43,6 +45,7 @@ from .ctc_contracts import (  # noqa: F401
     CTCCalculationInput,
     CTCCalculationResult,
     CTCApprovalRequest,
+    calculate_ctc,
     CTCServicePort,
 )
 from .auth_audit_contracts import (  # noqa: F401

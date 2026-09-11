@@ -5,7 +5,7 @@ Feature: 001-ats-core-mvp
 """
 
 from abc import ABC, abstractmethod
-from datetime import date
+from datetime import date, datetime, timezone
 from enum import Enum
 from typing import List, Optional
 from pydantic import BaseModel, ConfigDict, Field
@@ -16,6 +16,14 @@ class IdiomaNivelEnum(str, Enum):
     INTERMEDIO = "Intermedio (B1-B2)"
     AVANZADO = "Avanzado (C1-C2)"
     NATIVO = "Nativo"
+
+
+class IdiomaCompetencia(BaseModel):
+    """Competencia lingüística declarada con nivel estandarizado."""
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    idioma: str = Field(..., description="Nombre del idioma (ej. Inglés, Portugués, Quechua)")
+    nivel: IdiomaNivelEnum = Field(..., description="Nivel de dominio según marco europeo o competencia")
 
 
 class ModalidadLaboralEnum(str, Enum):
@@ -100,6 +108,10 @@ class CVExtractionResult(BaseModel):
         ge=0.0,
         description="Suma total estimada de años de ejercicio laboral técnico"
     )
+    modalidad_preferida: Optional[ModalidadLaboralEnum] = Field(
+        default=None,
+        description="Modalidad de trabajo deseada declarada en CV (Híbrido, Remoto, Presencial)"
+    )
     habilidades_tecnicas: List[HabilidadTecnica] = Field(
         default_factory=list,
         description="Listado de tecnologías, librerías, nubes y lenguajes identificados"
@@ -112,9 +124,9 @@ class CVExtractionResult(BaseModel):
         default_factory=list,
         description="Certificaciones técnicas y grados universitarios"
     )
-    idiomas: List[dict] = Field(
+    idiomas: List[IdiomaCompetencia] = Field(
         default_factory=list,
-        description="Idiomas y nivel de dominio (ej. [{'idioma': 'Inglés', 'nivel': 'Intermedio (B1-B2)'}])"
+        description="Idiomas y nivel de dominio estandarizado"
     )
     enlaces_profesionales: List[str] = Field(
         default_factory=list,
@@ -139,7 +151,7 @@ class CVUploadMetadata(BaseModel):
     hash_sha256: str
     mime_type: str
     subido_por_user_id: str
-    fecha_subida: str
+    fecha_subida: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class CVParserPort(ABC):

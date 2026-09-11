@@ -453,7 +453,8 @@ CREATE TABLE IF NOT EXISTS postulaciones_procesos (
     CONSTRAINT fk_postulacion_creador FOREIGN KEY (created_by_user_id) REFERENCES usuarios_rbac(id) ON DELETE RESTRICT,
     CONSTRAINT fk_postulacion_modificador FOREIGN KEY (updated_by_user_id) REFERENCES usuarios_rbac(id) ON DELETE SET NULL,
     CONSTRAINT chk_postulacion_fuente CHECK (fuente_origen IN ('Adecco', 'LinkedIn_Oficial', 'BYB_Referido', 'Offshore', 'Directo_Alumni', 'Bolsa_Web')),
-    CONSTRAINT chk_postulacion_motivo CHECK (motivo_cierre_tipo IS NULL OR motivo_cierre_tipo IN ('Temporal_No_Excluyente', 'Excluyente_Permanente', 'Contratacion_Exitosa', 'Desistimiento'))
+    CONSTRAINT chk_postulacion_motivo CHECK (motivo_cierre_tipo IS NULL OR motivo_cierre_tipo IN ('Temporal_No_Excluyente', 'Excluyente_Permanente', 'Contratacion_Exitosa', 'Desistimiento')),
+    CONSTRAINT chk_postulacion_estado CHECK (estado_embudo IN ('Nuevo', 'Screening_Telefonico', 'Pendiente_Entrevistas', 'Pendiente_Envio_Cliente', 'Entrevista_Cliente', 'Oferta_Economica', 'Oferta_Aceptada', 'Contratado', 'Descartado_Tecnico', 'Descartado_Economico', 'Descartado_Compliance', 'Desistio'))
 );
 CREATE INDEX IF NOT EXISTS idx_postulaciones_candidato ON postulaciones_procesos(candidato_id);
 CREATE INDEX IF NOT EXISTS idx_postulaciones_cliente ON postulaciones_procesos(cliente_cuenta);
@@ -596,4 +597,89 @@ CREATE TABLE IF NOT EXISTS cache_dni_reniec (
     cached_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_cache_dni ON cache_dni_reniec(dni);
+
+-- ============================================================================
+-- 11. TRIGGERS DE INMUTABILIDAD PARA bitacora_auditoria (APPEND-ONLY FORZADO)
+-- ============================================================================
+-- Garantiza físicamente el Principio Constitucional I, V y FR-043:
+-- Prohibición absoluta de UPDATE y DELETE en la bitácora histórica.
+
+CREATE TRIGGER IF NOT EXISTS trg_prevent_update_bitacora
+BEFORE UPDATE ON bitacora_auditoria
+BEGIN
+    SELECT RAISE(ABORT, 'Violacion de Integridad: La bitacora de auditoria es estrictamente inmutable y de solo adicion (append-only).');
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_prevent_delete_bitacora
+BEFORE DELETE ON bitacora_auditoria
+BEGIN
+    SELECT RAISE(ABORT, 'Violacion de Integridad: Prohibida la eliminacion de registros historicos en la bitacora de auditoria.');
+END;
+
+-- ============================================================================
+-- 12. DATOS DE ARRANQUE / BOOTSTRAP SEED (Resolución de Deadlock Administrativo)
+-- ============================================================================
+-- Crea el usuario inicial Head of Talent Acquisition (admin.ta@tcs.com)
+-- Contraseña de fábrica: Password123!
+-- Registra el evento fundacional en bitacora_auditoria.
+
+INSERT OR IGNORE INTO usuarios_rbac (
+    id, nombres_completos, email, hashed_password, rol, estado_cuenta, record_version
+) VALUES (
+    'usr-admin-bootstrap-001',
+    'Administrador Central Talent Acquisition',
+    'admin.ta@tcs.com',
+    '$2b$10$B3Bu4Yxhxw7I5.Y3n./qgOUMQXtLGmNrJHOZDEfTmtJbeiQqbCH36',
+    'Head_of_Talent_Acquisition',
+    'Activa',
+    1
+);
+
+INSERT OR IGNORE INTO bitacora_auditoria (
+    id, usuario_id, usuario_email, rol_en_momento, tipo_accion, entidad_objeto,
+    registro_id, version_registro, valores_nuevos_json, justificacion_operativa
+) VALUES (
+    'aud-boot-001',
+    'usr-admin-bootstrap-001',
+    'admin.ta@tcs.com',
+    'Head_of_Talent_Acquisition',
+    'Creacion',
+    'Usuario',
+    'usr-admin-bootstrap-001',
+    1,
+    '{"email": "admin.ta@tcs.com", "rol": "Head_of_Talent_Acquisition", "estado": "Activa"}',
+    'Inicializacion de bootstrap administrativo del sistema ATS Core MVP'
+);
+
+-- Semilla de prueba para caché DNI offline y ex-colaborador Boomerang (Diego Ramos Quispe)
+INSERT OR IGNORE INTO cache_dni_reniec (
+    dni, nombres, apellido_paterno, apellido_materno, fecha_nacimiento, ubigeo, distrito, direccion
+) VALUES (
+    '76128709',
+    'DIEGO ALONSO',
+    'RAMOS',
+    'QUISPE',
+    '1995-04-12',
+    '150140',
+    'Santiago de Surco',
+    'Av. Caminos del Inca 1234'
+);
+
+INSERT OR IGNORE INTO historial_alumni_tcs (
+    id, tipo_documento, numero_documento, nombres_completos, nombres_normalizado,
+    email_corporativo_historico, fecha_ingreso, fecha_cese, ultima_cuenta_proyecto,
+    motivo_desvinculacion, estatus_recontratacion
+) VALUES (
+    'alm-001',
+    'DNI',
+    '76128709',
+    'Diego Alonso Ramos Quispe',
+    'DIEGO ALONSO RAMOS QUISPE',
+    'diego.ramos@tcs.com',
+    '2022-03-01',
+    '2024-02-28',
+    'Entel Perú',
+    'Renuncia voluntaria por oportunidad de maestría',
+    'Rehire_Eligible'
+);
 ```

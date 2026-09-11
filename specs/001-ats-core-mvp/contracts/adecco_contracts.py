@@ -5,9 +5,9 @@ Feature: 001-ats-core-mvp
 """
 
 from abc import ABC, abstractmethod
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
-from typing import List, Optional
+from typing import Dict, List, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -16,6 +16,7 @@ class SemaforoClasificacionEnum(str, Enum):
     ROJO_EXCLUSION_PERMANENTE = "Rojo_Exclusion_Permanente"
     AMARILLO_REACTIVABLE = "Amarillo_Reactivable"
     VERDE_LIMPIO = "Verde_Limpio"
+    PURPURA_ALUMNI_BOOMERANG = "Purpura_Alumni_Boomerang"
 
 
 class MotivoExclusionEnum(str, Enum):
@@ -28,6 +29,18 @@ class MotivoExclusionEnum(str, Enum):
     REACTIVABLE_SALARIO = "Cierre previo por expectativa salarial (>180 días)"
     REACTIVABLE_CUPO = "Cierre previo por vacante cancelada/cubierta (>180 días)"
     INEDITO = "Sin antecedentes registrados"
+
+
+# Diccionario canónico de mapeo semántico de cabeceras para planillas de Adecco
+ADECCO_COLUMN_ALIASES: Dict[str, List[str]] = {
+    "documento": ["dni", "documento", "doc", "dni / ce", "ce", "pasaporte", "num_doc", "documento de identidad"],
+    "nombres": ["nombres", "nombre", "candidato", "postulante", "nombres y apellidos", "apellidos y nombres"],
+    "apellidos": ["apellidos", "apellido", "apellido paterno", "apellidos completos"],
+    "telefono": ["telefono", "teléfono", "celular", "movil", "móvil", "whatsapp", "contacto", "telefono movil"],
+    "email": ["email", "correo", "correo electronico", "correo electrónico", "mail", "e-mail"],
+    "perfil": ["perfil", "puesto", "rol", "cargo", "especialidad", "posicion", "posición", "vacante"],
+    "pretension": ["pretension", "pretensión", "sueldo", "salario", "expectativa salarial", "remuneracion", "remuneración", "monto"],
+}
 
 
 class AdeccoRowRaw(BaseModel):
@@ -87,17 +100,17 @@ class AdeccoBatchSummary(BaseModel):
     items: List[AdeccoValidationItemResult]
     tiempo_procesamiento_ms: float
     procesado_por_user_id: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class CarteraExclusionRow5Col(BaseModel):
     """
-    Estructura estricta y obligatoria de 5 columnas para el reporte entregado a Adecco.
+    Estructura estricta y obligatoria de exactamente 5 columnas para el reporte entregado a Adecco.
     Garantiza el 100% de cumplimiento de la Ley N° 29733 (cero teléfonos, correos o sueldos).
     """
     model_config = ConfigDict(str_strip_whitespace=True)
 
-    dni: str = Field(..., description="Columna 1: DNI del candidato en cartera")
+    dni: str = Field(..., description="Columna 1: Documento oficial (DNI/CE/Pasaporte) del candidato en cartera")
     nombres_y_apellidos: str = Field(..., description="Columna 2: Nombres y apellidos completos")
     perfil: str = Field(..., description="Columna 3: Especialidad o rol profesional")
     vigencia_exclusion: str = Field(..., description="Columna 4: Plazo hasta el cual rige la exclusión (ej. 'Hasta 15/12/2026' o 'Permanente')")

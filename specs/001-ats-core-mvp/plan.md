@@ -159,6 +159,7 @@ src/
 │       ├── p7_consola_auditoria.py# Consola central de auditoría global y trazabilidad forense
 │       └── p8_gestion_usuarios.py # Administración y elevación de roles (Head of TA)
 │
+├── app.py                       # Lanzador principal Streamlit (delega a src.ui.app)
 └── config.py                    # Carga y validación de variables de entorno (.env)
 
 tests/
@@ -169,11 +170,13 @@ tests/
 │   ├── test_e164_normalizer.py  # Pruebas de normalización telefónica y enlace WhatsApp
 │   ├── test_age_calculator.py   # Pruebas de cálculo dinámico de edad (cero candidatos 127 años)
 │   └── test_rbac_security.py    # Pruebas de roles, contraseñas y permisos mínimos
-├── contract/                    # Pruebas de contratos Pydantic y puertos
+├── contract/                    # Pruebas ejecutables de contratos Pydantic, triggers y puertos (30/30 passed)
 │   ├── test_dni_contracts.py
 │   ├── test_cv_contracts.py
 │   ├── test_adecco_contracts.py
-│   └── test_ctc_contracts.py
+│   ├── test_ctc_contracts.py
+│   ├── test_auth_audit_contracts.py
+│   └── test_database_ddl.py
 └── integration/                 # Pruebas de integración end-to-end con base de datos
     ├── test_candidate_lifecycle.py
     ├── test_adecco_batch_import.py

@@ -53,10 +53,11 @@ SESSION_TIMEOUT_MINUTES=30
 
 ## 2. Launching the Application
 
-Run the Streamlit application:
+Run the Streamlit application (via entry point launcher):
 
 ```powershell
 streamlit run src/app.py
+# O alternativamente: streamlit run src/ui/app.py
 ```
 
 Expected output:
@@ -79,14 +80,14 @@ The following 6 sequential scenarios validate 100% of the User Stories, Acceptan
 2. **Step 1.2**: Enter:
    - Nombres: `Carla Soto Mendoza`
    - Email: `carla.soto@tcs.com`
-   - Contraseña: `Password123!`
+   - Contraseña: `Password123!` (exige mínimo 8 caracteres, 1 mayúscula, 1 minúscula, 1 número y 1 carácter especial)
 3. **Step 1.3**: Click "Registrar Cuenta".
    - **Expected Outcome**: Account created with status `Activa` and default role `Compliance_Officer`.
 4. **Step 1.4**: Log in with `carla.soto@tcs.com`.
    - **Expected Outcome**: Logged in successfully. Notice the UI header badge indicates `[Rol: Compliance_Officer (Solo Lectura)]`.
 5. **Step 1.5**: Attempt to click "Nuevo Candidato" or edit any candidate field.
    - **Expected Outcome**: Action is prevented. Toast warning appears: *"Acceso denegado: su rol solo posee permisos de consulta y auditoría"*. A security event `Acceso_Denegado` is recorded in `bitacora_auditoria`.
-6. **Step 1.6**: Log in as initial admin `admin.ta@tcs.com` (`Head_of_Talent_Acquisition`) and access "Panel de Usuarios".
+6. **Step 1.6**: Log in as the pre-seeded bootstrap admin `admin.ta@tcs.com` (password: `Password123!`, con rol `Head_of_Talent_Acquisition` inicializado en la base de datos) and access "Panel de Usuarios".
 7. **Step 1.7**: Elevate `carla.soto@tcs.com` to `Senior_Technical_Recruiter` providing justification: *"Asignación a célula de selección de banca BCP"*.
    - **Expected Outcome**: Role elevated. Audit log confirms `Modificacion_Rol` linked to the Head of TA.
 
@@ -212,15 +213,15 @@ The following 6 sequential scenarios validate 100% of the User Stories, Acceptan
 To execute the automated unit and contract verification test suite:
 
 ```powershell
-# Run all unit tests
-pytest tests/unit -v
+# Run contract tests (30/30 tests covering Pydantic schemas, triggers and DDL)
+python -m pytest tests/contract -v
 
-# Run contract tests
-pytest tests/contract -v
+# Run all unit tests once implemented
+python -m pytest tests/unit -v
 
 # Run financial math tests with division-by-zero coverage
-pytest tests/unit/test_ctc_calculator.py -v
+python -m pytest tests/contract/test_ctc_contracts.py -v
 
-# Run deduplication and phonetic reconciliation tests
-pytest tests/unit/test_deduplication.py -v
+# Run DDL and trigger tests with physical immutability validation
+python -m pytest tests/contract/test_database_ddl.py -v
 ```

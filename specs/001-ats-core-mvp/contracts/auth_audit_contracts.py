@@ -5,7 +5,7 @@ Feature: 001-ats-core-mvp
 """
 
 from abc import ABC, abstractmethod
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -76,6 +76,8 @@ class UserRegistrationRequest(BaseModel):
             raise ValueError("La contraseña debe incluir al menos una letra minúscula.")
         if not any(c.isdigit() for c in v):
             raise ValueError("La contraseña debe incluir al menos un número.")
+        if not any(not c.isalnum() for c in v):
+            raise ValueError("La contraseña debe incluir al menos un carácter especial (ej. !@#$%^&*).")
         return v
 
 
@@ -123,8 +125,8 @@ class SessionPayload(BaseModel):
     email: str
     rol: RolUsuarioEnum
     session_token: str
-    login_time: datetime = Field(default_factory=datetime.utcnow)
-    last_activity: datetime = Field(default_factory=datetime.utcnow)
+    login_time: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    last_activity: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     def can_mutate(self) -> bool:
         """Determina si el rol tiene privilegios de escritura en el pipeline."""
@@ -187,6 +189,7 @@ class AuditSearchFilter(BaseModel):
     fecha_inicio: Optional[datetime] = None
     fecha_fin: Optional[datetime] = None
     usuario_id: Optional[str] = None
+    usuario_email: Optional[str] = None
     entidad_objeto: Optional[EntidadAuditoriaEnum] = None
     tipo_accion: Optional[TipoAccionAuditoriaEnum] = None
     registro_id: Optional[str] = None
