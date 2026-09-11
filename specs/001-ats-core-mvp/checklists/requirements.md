@@ -31,30 +31,29 @@
 
 ## Notes
 
-- **Auditoría de Calidad y Cumplimiento Constitucional (v1.2.0 - Incorporación de Autenticación, Control de Acceso y Trazabilidad Integral)**:
-  - Se confirmó la ausencia total de nombres de tecnologías, frameworks o detalles de infraestructura (cero menciones de JWT, Bcrypt, FastAPI, PostgreSQL, SQLAlchemy, React, Docker, SQLite, etc., los cuales quedan reservados estrictamente para `plan.md`).
-  - Se incorporó formalmente la **User Story 6 (Priority: P1)** respondiendo al requerimiento no negociable del usuario en la compuerta de revisión:
-    * Flujos de registro seguro de colaboradores institucionales (`@tcs.com`) e inicio/cierre de sesión con expiración automática por inactividad.
-    * Control de Acceso Basado en Roles (RBAC) con separación estricta de permisos entre Reclutadora, Coordinador/Administrador y Observador (solo lectura).
-    * Trazabilidad Transversal Obligatoria (Audit Trail): el 100% de las mutaciones (edición de campos de candidatos, cambios de estado en el embudo, subida de CVs, ingesta de planillas de Adecco, exportación de reportes de exclusión y simulaciones de variación CTC) quedan indisolublemente vinculadas al usuario autenticado, marca de tiempo precisa con zona horaria y valores antes/después.
-    * Inmutabilidad estricta de la bitácora de auditoría (*append-only*), prohibiendo funcionalmente cualquier edición, alteración retroactiva o borrado de eventos.
-    * Visualización accesible del historial de auditoría directamente en la Ficha Única del Candidato y Postulación.
-  - La especificación continúa erradicando los 3 procesos críticos que consumen 35 horas semanales de dolor operativo documentados en `CONSOLIDADO_MASTER_RECLUTAMIENTO_IA.md`:
-    * Proceso 1 (Registro manual - 25h/sem): Erradicado con Ficha Única, autollenado por DNI, normalización canónica E.164 (+51) con enlace a WhatsApp Web, extracción estructurada de CVs y captura de las 7 dimensiones de la llamada humana.
-    * Proceso 2 (Actualización de estados - 5h/sem): Centralizado en modelo unificado de postulación relacional en tiempo real, ahora con autoría y auditoría atómica por operador.
-    * Proceso 3 (Cruce con Adecco - 5h/sem): Resuelto con validador algorítmico masivo de semáforo (🔴 Rojo, 🟡 Amarillo, 🟢 Verde) y reporte de exclusión a demanda bajo Ley N° 29733 con registro auditable de cada exportación.
-  - Los 5 principios de `.specify/memory/constitution.md` y los estándares de seguridad de la Capa 6 (Security & Governance Layer) fueron plenamente blindados:
-    1. *Human-in-the-Loop Supremacy*: Prohibición absoluta de descarte o decisión autónoma por IA (FR-033). La llamada telefónica con sus 7 dimensiones de validación es 100% conducida por una reclutadora humana (FR-011, FR-034).
+- **Auditoría de Calidad y Cumplimiento Constitucional (v1.3.0 - Blindaje Integral de Autenticación, RBAC y Trazabilidad Transversal)**:
+  - Se erradicó cualquier filtración residual de detalles de implementación de bajo nivel (eliminado `HTTP 429` en Caso Borde 3 en favor de terminología agnóstica de negocio "límite de frecuencia o cuota").
+  - Se blindó la seguridad del autoregistro institucional (`@tcs.com`): las cuentas nuevas se crean bajo principio de mínimo privilegio con rol `Observador` (solo lectura), impidiendo mutaciones no autorizadas hasta que un `Coordinador / Administrador` eleve formalmente los privilegios (FR-037, Escenario 6.1).
+  - Se extendió la Trazabilidad Transversal Obligatoria (Audit Trail) tanto a nivel operativo (US1, US2, US4) como administrativo (FR-041, FR-042): cambios de roles, transferencias de vacantes/postulaciones, reseteos de credenciales y desbloqueos manuales quedan asentados atómicamente con autor, rol, marca temporal y valores previos/posteriores.
+  - Se incorporó la Consola Central de Auditoría Global (FR-046, Escenario 6.7) para que Coordinadores y Compliance puedan auditar y exportar eventos consolidando el cumplimiento de la Ley N° 29733.
+  - Se especificó el Control de Concurrencia Optimista (FR-047, Caso Borde 17) para prevenir colisiones y sobreescrituras ciegas entre reclutadoras concurrentes en la misma vacante o ficha.
+  - Se especificó la Atomicidad Transaccional y Reversión Íntegra (*rollback*) ante caídas de red o desconexiones durante ingestas masivas de planillas o CVs (FR-048, Caso Borde 18).
+  - Se definió el procedimiento de desbloqueo manual administrativo para cuentas bloqueadas preventivamente (Caso Borde 19).
+  - La especificación continúa erradicando las 35 horas semanales de dolor operativo en Selección:
+    * Proceso 1 (Registro manual - 25h/sem): Ficha Única, autollenado por DNI, normalización E.164 (+51), WhatsApp Web, parsing asistido de CVs y 7 dimensiones del screening humano con autoría indivisible.
+    * Proceso 2 (Actualización de estados - 5h/sem): Pipeline relacional en tiempo real, trazabilidad atómica y control de concurrencia optimista.
+    * Proceso 3 (Cruce con Adecco - 5h/sem): Validador algorítmico masivo de semáforo (🔴 Rojo, 🟡 Amarillo, 🟢 Verde), reporte de exclusión a demanda bajo Ley N° 29733 y alerta de ex-colaboradores TCS Boomerang.
+  - Los 5 principios de `.specify/memory/constitution.md` y los estándares de la Capa 6 (Security & Governance Layer) fueron blindados:
+    1. *Human-in-the-Loop Supremacy*: Prohibición absoluta de descarte o decisión autónoma por IA (FR-033). Screening telefónico 100% conducido por una reclutadora humana (FR-011, FR-034).
     2. *Zero Web-Scraping*: Prohibición expresa de automatizaciones contra LinkedIn Recruiter; operación basada en datos internos y archivos formalmente autorizados (FR-035).
     3. *Relational Single Source of Truth*: Erradicación de las 11 pestañas de `BD GENERAL FY27`, normalización estricta a E.164 (`+519XXXXXXXX`), cálculo dinámico de edad (cero candidatos de 127 años) y blindaje contra división por cero (`#DIV/0!`) en fórmulas de variación CTC (FR-004, FR-005, FR-026, FR-027).
     4. *Deduplicación Algorítmica y Control del Proveedor*: Semáforo masivo para planillas externas con detección cruzada de candidatos Boomerang (FR-017) para evitar pagos indebidos de comisión, y reporte de exclusión a demanda bajo Ley N° 29733 (FR-020 a FR-023).
     5. *IA Ética sin Sesgos*: Prohibición expresa de procesar atributos protegidos (edad, género, estado civil, foto, domicilio exacto) como criterios de selección o filtrado (FR-036).
-    6. *Seguridad, RBAC y Trazabilidad Integral*: Gobernanza de identidades, sesiones protegidas, permisos por rol, e inmutabilidad estricta del historial de cambios (FR-037 a FR-045).
-  - Se definieron 16 casos borde exhaustivos (incluyendo bloqueo preventivo tras 5 intentos fallidos, reautenticación sin pérdida de datos ante sesiones expiradas, denegación estricta a roles no autorizados e inmutabilidad total de la bitácora).
-  - Métricas de cobertura de la especificación:
-    * 45 Requerimientos Funcionales testables (FR-001 a FR-045).
+    6. *Seguridad, RBAC y Trazabilidad Integral*: Gobernanza de identidades, sesiones protegidas, mínimo privilegio por defecto, control de concurrencia, e inmutabilidad estricta del historial de cambios (FR-037 a FR-048).
+  - Métricas consolidadas de cobertura de la especificación:
+    * 48 Requerimientos Funcionales testables (FR-001 a FR-048).
     * 9 Entidades Funcionales del modelo conceptual (incluyendo `Usuario` y `Registro de Auditoría / Bitácora de Cambios`).
-    * 9 Criterios de Éxito medibles y agnósticos a la tecnología (SC-001 a SC-009).
-    * 16 Casos Borde con comportamiento predecible del sistema documentado.
+    * 10 Criterios de Éxito medibles y agnósticos a la tecnología (SC-001 a SC-010).
+    * 19 Casos Borde con comportamiento predecible del sistema documentado.
     * 10 Supuestos y dependencias documentados sin ningún marcador `[NEEDS CLARIFICATION]`.
-  - El artefacto se encuentra completamente verificado, auditado y listo para la fase de arquitectura técnica (`/speckit-plan`).
+  - El artefacto se encuentra exhaustivamente verificado, robustecido y listo para la fase de arquitectura técnica (`/speckit-plan`).
