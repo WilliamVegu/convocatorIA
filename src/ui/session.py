@@ -12,6 +12,48 @@ from src.services.audit_service import AuditService
 
 SESSION_TIMEOUT_SECONDS = config.SESSION_TIMEOUT_MINUTES * 60
 
+NAV_PAGE_KEYS: Dict[str, str] = {
+    "p9_rgs": "1. 📝 Requerimiento RGS a JD",
+    "p1_ficha": "2. 📋 Ficha Única de Candidato",
+    "p2_screening": "3. 📞 Screening Telefónico (HITL)",
+    "p3_ctc": "4. 💰 Simulador Financiero CTC",
+    "p4_adecco": "5. 📊 Validador Masivo Adecco",
+    "p5_exclusiones": "6. 🔒 Reporte de Exclusiones (Ley 29733)",
+    "p6_alumni": "7. 🟣 Catálogo Alumni TCS",
+    "p7_auditoria": "8. 🛡️ Consola de Auditoría & Métricas",
+    "p8_usuarios": "9. 👥 Gestión de Usuarios y Roles",
+}
+
+CANONICAL_PAGE_MAP: Dict[str, str] = {
+    "p9_rgs": "p9_rgs",
+    "p1_ficha": "p1_ficha",
+    "p2_screening": "p2_screening",
+    "p3_ctc": "p3_ctc",
+    "p4_adecco": "p4_adecco",
+    "p5_exclusiones": "p5_exclusiones",
+    "p6_alumni": "p6_alumni",
+    "p7_auditoria": "p7_auditoria",
+    "p8_usuarios": "p8_usuarios",
+    "1. 📝 Requerimiento RGS a JD": "p9_rgs",
+    "2. 📋 Ficha Única de Candidato": "p1_ficha",
+    "3. 📞 Screening Telefónico (HITL)": "p2_screening",
+    "4. 💰 Simulador Financiero CTC": "p3_ctc",
+    "5. 📊 Validador Masivo Adecco": "p4_adecco",
+    "6. 🔒 Reporte de Exclusiones (Ley 29733)": "p5_exclusiones",
+    "7. 🟣 Catálogo Alumni TCS": "p6_alumni",
+    "8. 🛡️ Consola de Auditoría & Métricas": "p7_auditoria",
+    "9. 👥 Gestión de Usuarios y Roles": "p8_usuarios",
+    "📝 Normalizador RGS a JD": "p9_rgs",
+    "📋 Ficha Única de Candidato": "p1_ficha",
+    "📞 Screening Telefónico (HITL)": "p2_screening",
+    "💰 Simulador Financiero CTC": "p3_ctc",
+    "📊 Validador Masivo Adecco": "p4_adecco",
+    "🔒 Reporte de Exclusiones (Ley 29733)": "p5_exclusiones",
+    "🟣 Catálogo Alumni TCS": "p6_alumni",
+    "🛡️ Auditoría & Métricas del Embudo": "p7_auditoria",
+    "👥 Gestión de Usuarios y Roles": "p8_usuarios",
+}
+
 
 def init_session() -> None:
     """Initialize session state defaults if not already present."""
@@ -28,7 +70,56 @@ def init_session() -> None:
     if "last_activity_time" not in st.session_state:
         st.session_state["last_activity_time"] = time.time()
     if "current_page" not in st.session_state:
-        st.session_state["current_page"] = "p1_ficha"
+        st.session_state["current_page"] = "p9_rgs"
+    if "active_nav_page" not in st.session_state:
+        st.session_state["active_nav_page"] = NAV_PAGE_KEYS.get(st.session_state["current_page"], "1. 📝 Requerimiento RGS a JD")
+    if "nav_context" not in st.session_state:
+        st.session_state["nav_context"] = {}
+
+
+def navigate_to(page_target: str, context: Optional[Dict[str, Any]] = None) -> None:
+    """Programmatic navigation between recruitment pipeline pages with context hand-off."""
+    init_session()
+    canonical_key = CANONICAL_PAGE_MAP.get(page_target, page_target)
+    display_label = NAV_PAGE_KEYS.get(canonical_key, page_target)
+
+    st.session_state["current_page"] = canonical_key
+    st.session_state["active_nav_page"] = display_label
+
+    if context:
+        if "nav_context" not in st.session_state:
+            st.session_state["nav_context"] = {}
+        st.session_state["nav_context"].update(context)
+
+    st.rerun()
+
+
+def get_nav_context(key: Optional[str] = None, default: Any = None, pop: bool = False) -> Any:
+    """Retrieve navigation context passed from another page."""
+    init_session()
+    ctx = st.session_state.get("nav_context", {})
+    if key is None:
+        if pop:
+            st.session_state["nav_context"] = {}
+        return ctx
+    val = ctx.get(key, default)
+    if pop and key in ctx:
+        del ctx[key]
+    return val
+
+
+def set_nav_context(key: str, value: Any) -> None:
+    """Store specific context data for cross-page consumption."""
+    init_session()
+    if "nav_context" not in st.session_state:
+        st.session_state["nav_context"] = {}
+    st.session_state["nav_context"][key] = value
+
+
+def clear_nav_context() -> None:
+    """Clear temporary navigation context."""
+    init_session()
+    st.session_state["nav_context"] = {}
 
 
 def check_session_timeout() -> bool:

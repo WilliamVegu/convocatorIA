@@ -11,7 +11,7 @@ from src.adapters.persistence.repositories.audit_repository import AuditReposito
 from src.services.audit_service import AuditService
 from src.services.alumni_service import AlumniService
 from src.services.candidate_service import normalize_full_name
-from src.ui.session import get_current_user, enforce_write_permission
+from src.ui.session import get_current_user, enforce_write_permission, navigate_to
 from src.ui.theme import render_badge
 
 
@@ -64,6 +64,20 @@ def _render_catalogo_alumni() -> None:
             })
 
         st.dataframe(rows, use_container_width=True)
+
+        eligible_alumni = [a for a in alumni_list if a.estatus_recontratacion == "Rehire_Eligible"]
+        if eligible_alumni:
+            st.markdown("---")
+            st.markdown("##### 🚀 Recontratación Rápida de Ex-Colaborador (Patrimonio TCS):")
+            c_sel, c_btn = st.columns([3, 1])
+            with c_sel:
+                alumni_map = {a.numero_documento: f"{a.nombres_completos} (DNI: {a.numero_documento} - {a.ultima_cuenta_proyecto})" for a in eligible_alumni}
+                sel_dni = st.selectbox("Seleccione un Alumni Elegible para iniciar postulación:", list(alumni_map.keys()), format_func=lambda x: alumni_map[x], key="sel_alumni_rehire")
+            with c_btn:
+                st.write("")
+                st.write("")
+                if st.button("📋 Crear Ficha ➔", type="primary", use_container_width=True, key="btn_rehire_alumni"):
+                    navigate_to("p1_ficha", context={"prefill_dni": sel_dni})
 
 
 def _render_registro_alumni() -> None:

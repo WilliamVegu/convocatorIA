@@ -44,6 +44,10 @@ class CandidateService:
         """Lookup citizen identity via DNI port (local cache or APIsPERU)."""
         return self.dni_port.resolve_dni(dni)
 
+    def lookup_ruc(self, ruc: str) -> Dict[str, Any]:
+        """Lookup corporate / taxpayer identity via APIsPERU SUNAT port."""
+        return self.dni_port.resolve_ruc(ruc)
+
     def create_candidate(
         self,
         actor_user_id: str,
@@ -175,9 +179,31 @@ class CandidateService:
             "record_version": cand_before.record_version,
         }
 
-        # Normalize phone if updated
+        # Normalize phone if updated and check collision
         if "telefono_raw" in updates:
-            updates["telefono_e164"] = str(TelefonoE164(updates.pop("telefono_raw")))
+            new_tel = str(TelefonoE164(updates.pop("telefono_raw")))
+            if new_tel != cand_before.telefono_e164:
+                existing_p = self.candidato_repo.get_by_phone(new_tel)
+                if existing_p and existing_p.id != candidato_id:
+                    raise DuplicateEntityError(f"El teléfono '{new_tel}' ya está asignado a otro candidato registrado.")
+            updates["telefono_e164"] = new_tel
+
+        # Validate email if updated and check collision
+        if "email" in updates:
+            clean_email = updates["email"].strip().lower()
+            if clean_email != cand_before.email:
+                existing_e = self.candidato_repo.get_by_email(clean_email)
+                if existing_e and existing_e.id != candidato_id:
+                    raise DuplicateEntityError(f"El correo '{clean_email}' ya está asignado a otro candidato registrado.")
+            updates["email"] = clean_email
+
+        # Recalculate normalized full name if names change
+        if any(k in updates for k in ("nombres", "apellido_paterno", "apellido_materno")):
+            new_nom = updates.get("nombres", cand_before.nombres)
+            new_pat = updates.get("apellido_paterno", cand_before.apellido_paterno)
+            new_mat = updates.get("apellido_materno", cand_before.apellido_materno)
+            raw_full = f"{new_nom} {new_pat} {new_mat or ''}".strip()
+            updates["nombres_completos_normalizado"] = normalize_full_name(raw_full)
 
         updated = self.candidato_repo.update(
             candidato_id=candidato_id,

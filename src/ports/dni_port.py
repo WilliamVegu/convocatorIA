@@ -17,3 +17,10 @@ class DNIPort(ABC):
         3. If offline/error, return fallback structure with regularizacion_pendiente=True.
         """
         pass
+
+    def resolve_ruc(self, ruc: str) -> Dict[str, Any]:
+        """
+        Resolve company / taxpayer identity by RUC via SUNAT endpoint.
+        """
+        return {"success": False, "mensaje": "No implementado", "datos": {}}
+

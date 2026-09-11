@@ -219,3 +219,60 @@ def render_header(
 
     st.markdown("<hr style='margin: 8px 0 16px 0; border: none; border-top: 1px solid #334155;'/>", unsafe_allow_html=True)
 
+
+def render_pipeline_stepper(
+    current_step: int,
+    candidate_name: Optional[str] = None,
+    role_or_rgs: Optional[str] = None,
+) -> None:
+    """Render a visual 5-step recruitment progress stepper banner."""
+    steps = [
+        (1, "Demanda RGS", "📝"),
+        (2, "Ficha & CV", "📋"),
+        (3, "Screening HITL", "📞"),
+        (4, "Simulación CTC", "💰"),
+        (5, "Terna / One-Pager", "📄"),
+    ]
+
+    items_html = []
+    for step_num, step_label, icon in steps:
+        if step_num < current_step:
+            badge_style = "background: #065F46; color: #34D399; border: 1px solid #059669;"
+            icon_disp = "✔"
+            status_text = "Completado"
+        elif step_num == current_step:
+            badge_style = "background: #0369A1; color: #E0F2FE; border: 2px solid #38BDF8; font-weight: 700; box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);"
+            icon_disp = icon
+            status_text = "En curso"
+        else:
+            badge_style = "background: #1E293B; color: #64748B; border: 1px solid #334155;"
+            icon_disp = icon
+            status_text = "Pendiente"
+
+        items_html.append(
+            f'<div style="flex: 1; margin: 0 4px; padding: 6px 10px; border-radius: 8px; {badge_style} text-align: center; font-size: 12px;">'
+            f'<div style="font-size: 13px; margin-bottom: 2px;">{icon_disp} <b>{step_label}</b></div>'
+            f'<div style="font-size: 10px; text-transform: uppercase; opacity: 0.9;">{status_text}</div>'
+            f'</div>'
+        )
+
+    cand_banner = ""
+    if candidate_name or role_or_rgs:
+        cand_str = f"👤 <b>{candidate_name}</b>" if candidate_name else ""
+        role_str = f"📌 Rol: <b>{role_or_rgs}</b>" if role_or_rgs else ""
+        sep = " &nbsp;|&nbsp; " if cand_str and role_str else ""
+        cand_banner = (
+            f'<div style="font-size: 12px; color: #94A3B8; margin-bottom: 6px; padding: 4px 10px; background: rgba(15, 23, 42, 0.6); border-radius: 6px;">'
+            f'{cand_str}{sep}{role_str}'
+            f'</div>'
+        )
+
+    stepper_html = (
+        f'<div style="background: #0F172A; border: 1px solid #334155; border-radius: 10px; padding: 10px 14px; margin-bottom: 16px;">'
+        f'{cand_banner}'
+        f'<div style="display: flex; justify-content: space-between; align-items: center;">'
+        + "".join(items_html)
+        + '</div></div>'
+    )
+    st.markdown(stepper_html, unsafe_allow_html=True)
+

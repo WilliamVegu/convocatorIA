@@ -42,13 +42,11 @@ class LangChainCVExtractor(CVParserPort):
             try:
                 from langchain_google_genai import ChatGoogleGenerativeAI
                 llm = ChatGoogleGenerativeAI(
-                    model="gemini-2.5-flash",
+                    model="gemini-3.8-flash",
                     google_api_key=config.GEMINI_API_KEY,
-                    temperature=0.0,
                 )
-                logger.info("LangChain Gemini extractor invoked.")
-                # We can perform structured extraction or fallback
-                return self._parse_with_llm(llm, text, "GEMINI_LANGCHAIN")
+                logger.info("LangChain Gemini extractor invoked with gemini-3.8-flash.")
+                return self._parse_with_llm(llm, text, "Google Gemini 3.8 Flash (IA)")
             except Exception as e:
                 logger.warning(f"Fallo en LangChain Gemini, intentando Grok o Fallback: {e}")
 
@@ -61,7 +59,7 @@ class LangChainCVExtractor(CVParserPort):
                     temperature=0.0,
                 )
                 logger.info("LangChain Grok extractor invoked.")
-                return self._parse_with_llm(llm, text, "GROK_LANGCHAIN")
+                return self._parse_with_llm(llm, text, "xAI Grok (IA)")
             except Exception as e:
                 logger.warning(f"Fallo en LangChain Grok: {e}")
 
@@ -76,21 +74,46 @@ class LangChainCVExtractor(CVParserPort):
             "Extrae las competencias técnicas, años de experiencia total estimada y niveles de idiomas del siguiente CV. "
             "IMPORTANTE: Cumpliendo el Principio Constitucional V y la Ley N° 29733, está ESTRICTAMENTE PROHIBIDO "
             "extraer datos protegidos: no extraigas edad, fecha de nacimiento, género, estado civil, dirección domiciliaria ni foto. "
-            "Retorna un JSON estructurado con: resumen_profesional, seniority_estimado (Junior, Semi-Senior, Senior), "
-            "anios_experiencia_total (número float), modalidad_preferida (Remoto, Presencial, Híbrido), "
-            "habilidades_tecnicas (lista de objetos con nombre, categoria), idiomas (lista de objetos con idioma, nivel).\n\n"
+            "Retorna ÚNICAMENTE un JSON estructurado (sin texto introductorio ni explicaciones) con las siguientes claves:\n"
+            "{\n"
+            '  "resumen_profesional": "Breve resumen técnico del candidato",\n'
+            '  "seniority_estimado": "Junior" | "Semi-Senior" | "Senior",\n'
+            '  "anios_experiencia_total": 4.5,\n'
+            '  "modalidad_preferida": "Híbrido",\n'
+            '  "habilidades_tecnicas": [{"nombre": "Python", "categoria": "Backend"}],\n'
+            '  "idiomas": [{"idioma": "Inglés", "nivel": "Intermedio"}]\n'
+            "}\n\n"
             f"Texto del CV:\n{text[:4000]}"
         )
         try:
             response = llm.invoke(prompt)
-            content = response.content if hasattr(response, "content") else str(response)
-            # Parse json or fallback
+            raw_content = response.content if hasattr(response, "content") else str(response)
+
+            # Handle content when returned as list of dicts (e.g. [{'type': 'text', 'text': '...'}])
+            if isinstance(raw_content, list):
+                text_parts = []
+                for part in raw_content:
+                    if isinstance(part, dict) and "text" in part:
+                        text_parts.append(part["text"])
+                    elif isinstance(part, str):
+                        text_parts.append(part)
+                content_str = "\n".join(text_parts)
+            else:
+                content_str = str(raw_content)
+
             import json, re
-            json_match = re.search(r"```json\n(.*?)\n```", content, re.DOTALL)
+            json_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", content_str, re.DOTALL)
             if json_match:
                 parsed = json.loads(json_match.group(1))
             else:
-                parsed = json.loads(content)
+                # Try finding first { and last }
+                start_idx = content_str.find("{")
+                end_idx = content_str.rfind("}")
+                if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+                    parsed = json.loads(content_str[start_idx : end_idx + 1])
+                else:
+                    parsed = json.loads(content_str)
+
             parsed["motor_extraccion_usado"] = provider_tag
             return parsed
         except Exception as e:

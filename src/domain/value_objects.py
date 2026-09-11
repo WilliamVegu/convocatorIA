@@ -50,6 +50,10 @@ class TelefonoE164:
         encoded = urllib.parse.quote(msg)
         return f"https://wa.me/{self.raw_digits}?text={encoded}"
 
+    def to_whatsapp_url(self, mensaje_personalizado: Optional[str] = None) -> str:
+        """Alias for generate_whatsapp_url with spanish parameter support."""
+        return self.generate_whatsapp_url(message=mensaje_personalizado)
+
     def __str__(self) -> str:
         return self.value
 

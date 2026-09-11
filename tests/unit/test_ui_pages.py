@@ -130,3 +130,49 @@ def test_session_audit_check_constraints_respected(db_session, admin_user):
     )
     db_session.commit()
     assert sec_id is not None
+
+
+def test_pipeline_organic_navigation_and_context_handoff():
+    """Verify that programmatic navigation and context handoff work end-to-end."""
+    at = AppTest.from_file(APP_PATH)
+    at.run()
+
+    at.session_state["is_authenticated"] = True
+    at.session_state["user_id"] = "usr-admin-bootstrap-001"
+    at.session_state["email"] = "admin.ta@tcs.com"
+    at.session_state["nombres_completos"] = "Administrador Central Talent Acquisition"
+    at.session_state["rol"] = "Head_of_Talent_Acquisition"
+
+    # Step 1: Navigate to p1 with RGS context
+    at.session_state["current_page"] = "p1_ficha"
+    at.session_state["nav_context"] = {
+        "rgs_cliente": "BCP",
+        "rgs_perfil": "Data Engineer",
+        "rgs_modalidad": "Remoto",
+    }
+    at.run()
+    assert not at.exception
+    sb_labels = {sb.label: sb.value for sb in at.selectbox}
+    assert sb_labels.get("Cuenta / Cliente Asignado") == "BCP"
+    assert sb_labels.get("Perfil Solicitado") == "Data Engineer"
+    assert sb_labels.get("Modalidad Requerida") == "Remoto"
+
+    # Step 2: Navigate to p2 screening with target postulación context
+    at.session_state["current_page"] = "p2_screening"
+    at.session_state["nav_context"] = {
+        "target_postulacion_id": "post-demo-001",
+        "salario": 7200.0,
+    }
+    at.run()
+    assert not at.exception
+
+    # Step 3: Navigate to p3 CTC with target postulación and salary context
+    at.session_state["current_page"] = "p3_ctc"
+    at.session_state["nav_context"] = {
+        "target_postulacion_id": "post-demo-001",
+        "monto_bruto": 7200.0,
+        "perfil": "Data Engineer",
+    }
+    at.run()
+    assert not at.exception
+

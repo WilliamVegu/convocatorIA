@@ -105,6 +105,33 @@ class PostulacionRepository:
         self.session.flush()
         return post
 
+    def update_postulacion(
+        self,
+        postulacion_id: str,
+        updated_by_user_id: str,
+        expected_version: Optional[int] = None,
+        **updates: Any,
+    ) -> PostulacionModel:
+        """Update any postulación attributes with optimistic locking."""
+        post = self.get_by_id(postulacion_id)
+        if not post:
+            raise EntityNotFoundError(f"Postulación {postulacion_id} no encontrada.")
+
+        if expected_version is not None and post.record_version != expected_version:
+            raise OptimisticLockError(
+                f"Conflicto de concurrencia en postulación {postulacion_id}. Versión esperada: {expected_version}, actual: {post.record_version}"
+            )
+
+        for field_name, value in updates.items():
+            if hasattr(post, field_name):
+                setattr(post, field_name, value)
+
+        post.record_version += 1
+        post.updated_by_user_id = updated_by_user_id
+        post.updated_at = datetime.now(timezone.utc)
+        self.session.flush()
+        return post
+
     # Screening
     def create_screening(
         self,

@@ -23,6 +23,7 @@ from src.ui.pages.p5_reporte_exclusion import render_reporte_exclusion_page
 from src.ui.pages.p6_alumni_tcs import render_alumni_page
 from src.ui.pages.p7_consola_auditoria import render_consola_auditoria_page
 from src.ui.pages.p8_gestion_usuarios import render_gestion_usuarios_page
+from src.ui.pages.p9_normalizador_rgs import render_normalizador_rgs_page
 
 
 def main() -> None:
@@ -66,45 +67,65 @@ def main() -> None:
     st.sidebar.markdown(f"👤 **{current_user['nombres_completos']}**")
     rol_display = current_user['rol'].replace('_', ' ')
     st.sidebar.markdown(f"<span class='tcs-badge tcs-badge-blue'>{rol_display}</span>", unsafe_allow_html=True)
-    st.sidebar.markdown("<hr style='margin: 10px 0; border: none; border-top: 1px solid #334155;'/>", unsafe_allow_html=True)
+    st.sidebar.markdown("<hr style='margin: 8px 0; border: none; border-top: 1px solid #334155;'/>", unsafe_allow_html=True)
 
     nav_options = [
-        "📋 Ficha Única de Candidato",
-        "📞 Screening Telefónico (HITL)",
-        "💰 Simulador Financiero CTC",
-        "📊 Validador Masivo Adecco",
-        "🔒 Reporte de Exclusiones (Ley 29733)",
-        "🟣 Catálogo Alumni TCS",
-        "🛡️ Auditoría & Métricas del Embudo",
+        "1. 📝 Requerimiento RGS a JD",
+        "2. 📋 Ficha Única de Candidato",
+        "3. 📞 Screening Telefónico (HITL)",
+        "4. 💰 Simulador Financiero CTC",
+        "5. 📊 Validador Masivo Adecco",
+        "6. 🔒 Reporte de Exclusiones (Ley 29733)",
+        "7. 🟣 Catálogo Alumni TCS",
+        "8. 🛡️ Consola de Auditoría & Métricas",
     ]
 
     # Show User Management exclusively to Head of TA
     if is_head_of_ta():
-        nav_options.append("👥 Gestión de Usuarios y Roles")
+        nav_options.append("9. 👥 Gestión de Usuarios y Roles")
 
-    selected_page = st.sidebar.radio("Navegación:", nav_options)
+    # Determine default index based on current session state
+    from src.ui.session import NAV_PAGE_KEYS, CANONICAL_PAGE_MAP
+
+    current_key = st.session_state.get("current_page", "p9_rgs")
+    target_label = NAV_PAGE_KEYS.get(current_key)
+    current_active = st.session_state.get("active_nav_page")
+
+    if target_label in nav_options:
+        default_index = nav_options.index(target_label)
+    elif current_active in nav_options:
+        default_index = nav_options.index(current_active)
+    else:
+        default_index = 0
+
+    selected_page = st.sidebar.radio("Etapas del Proceso:", nav_options, index=default_index)
+    canonical_key = CANONICAL_PAGE_MAP.get(selected_page, "p9_rgs")
+    st.session_state["current_page"] = canonical_key
+    st.session_state["active_nav_page"] = selected_page
 
     st.sidebar.markdown("---")
     if st.sidebar.button("🚪 Cerrar Sesión", use_container_width=True):
         logout(reason="Cierre de sesión voluntario por el usuario")
         st.rerun()
 
-    # Route to selected page
-    if selected_page == "📋 Ficha Única de Candidato":
+    # Route to selected page via canonical key
+    if canonical_key == "p9_rgs":
+        render_normalizador_rgs_page()
+    elif canonical_key == "p1_ficha":
         render_ficha_candidato_page()
-    elif selected_page == "📞 Screening Telefónico (HITL)":
+    elif canonical_key == "p2_screening":
         render_screening_page()
-    elif selected_page == "💰 Simulador Financiero CTC":
+    elif canonical_key == "p3_ctc":
         render_simulador_ctc_page()
-    elif selected_page == "📊 Validador Masivo Adecco":
+    elif canonical_key == "p4_adecco":
         render_validador_adecco_page()
-    elif selected_page == "🔒 Reporte de Exclusiones (Ley 29733)":
+    elif canonical_key == "p5_exclusiones":
         render_reporte_exclusion_page()
-    elif selected_page == "🟣 Catálogo Alumni TCS":
+    elif canonical_key == "p6_alumni":
         render_alumni_page()
-    elif selected_page == "🛡️ Auditoría & Métricas del Embudo":
+    elif canonical_key == "p7_auditoria":
         render_consola_auditoria_page()
-    elif selected_page == "👥 Gestión de Usuarios y Roles":
+    elif canonical_key == "p8_usuarios":
         render_gestion_usuarios_page()
 
 

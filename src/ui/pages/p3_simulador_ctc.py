@@ -6,13 +6,15 @@ import streamlit as st
 
 from src.services.ctc_calculator_service import CTCCalculatorService
 from src.services.ctc_service import CTCService
+from src.services.salary_radar_service import SalaryRadarService
 from src.services.audit_service import AuditService
 from src.adapters.persistence.database import SessionLocal
 from src.adapters.persistence.repositories.postulacion_repository import PostulacionRepository
 from src.adapters.persistence.repositories.candidato_repository import CandidatoRepository
 from src.adapters.persistence.repositories.audit_repository import AuditRepository
-from src.ui.session import get_current_user, enforce_write_permission, is_head_of_ta
-from src.ui.theme import render_badge
+from src.ui.session import get_current_user, enforce_write_permission, is_head_of_ta, get_nav_context, navigate_to
+from src.ui.theme import render_badge, render_pipeline_stepper
+from src.adapters.reporting.one_pager_builder import OnePagerBuilder
 
 
 def render_simulador_ctc_page() -> None:
@@ -25,16 +27,29 @@ def render_simulador_ctc_page() -> None:
     user_email = user.get("email", "demo@tcs.com")
     user_role = user.get("rol", "Senior_Technical_Recruiter")
 
+    target_p_id = get_nav_context("target_postulacion_id")
+    cand_name_ctx = get_nav_context("cand_name", "")
+    perfil_ctx = get_nav_context("perfil", "")
+    monto_bruto_ctx = get_nav_context("monto_bruto")
+
+    role_display = perfil_ctx or "Validación Presupuestal Factor 1.56"
+    render_pipeline_stepper(
+        current_step=4,
+        candidate_name=cand_name_ctx,
+        role_or_rgs=role_display,
+    )
+
     c_calc, c_post = st.columns([3, 2])
 
     with c_calc:
         st.markdown("#### 1. Parámetros de Simulación Salarial")
         tipo_salario = st.radio("Modalidad de Expectativa Salarial:", ["Bruto", "Neto"], horizontal=True)
 
+        default_monto = float(monto_bruto_ctx) if monto_bruto_ctx else 5000.0
         monto_input = st.number_input(
             "Monto Mensual Declarado por el Candidato (S/.)",
             min_value=0.0,
-            value=5000.0,
+            value=default_monto,
             step=100.0,
             format="%.2f",
         )
@@ -48,6 +63,28 @@ def render_simulador_ctc_page() -> None:
         )
 
         presupuesto_val: Optional[float] = presupuesto_input if presupuesto_input > 0 else None
+
+        perfiles_bench = ["Desarrollador Java", "Data Engineer", "DevOps Specialist", "Full Stack Developer", "Cloud Architect", "QA Automation", "Scrum Master"]
+        p_bench_ix = 0
+        if perfil_ctx:
+            for i, pb in enumerate(perfiles_bench):
+                if pb.lower() in perfil_ctx.lower():
+                    p_bench_ix = i
+                    break
+
+        r_col1, r_col2 = st.columns(2)
+        with r_col1:
+            perfil_select = st.selectbox(
+                "Perfil Técnico a Benchmarcar:",
+                perfiles_bench,
+                index=p_bench_ix,
+            )
+        with r_col2:
+            seniority_select = st.selectbox(
+                "Seniority Requerido:",
+                ["Junior", "Semi-Senior", "Senior", "Lead"],
+                index=2,
+            )
 
         calculator = CTCCalculatorService()
         calc_result = calculator.calculate(
@@ -102,6 +139,27 @@ def render_simulador_ctc_page() -> None:
         for warn in calc_result.get("advertencias_rango", []):
             st.warning(f"⚠️ {warn}")
 
+        # Propuesta P22: Radar Salarial Tech y Benchmarking Local (Lima 2026)
+        st.markdown("---")
+        st.markdown("##### 📊 Radar Salarial Tech y Benchmarking Local (Lima 2026)")
+        st.caption("Contraste en tiempo real contra percentiles P25, P50 (mediana) y P75 del mercado IT local:")
+        radar_svc = SalaryRadarService()
+        radar_result = radar_svc.evaluate_salary(
+            perfil_puesto=perfil_select,
+            salario_pretendido=calc_result["salario_bruto_mensual"],
+            seniority=seniority_select,
+        )
+
+        r1, r2, r3 = st.columns(3)
+        with r1:
+            st.metric("P25 (Bajo Mercado)", f"S/. {radar_result.p25:,.0f}")
+        with r2:
+            st.metric("P50 (Mediana Lima)", f"S/. {radar_result.p50:,.0f}")
+        with r3:
+            st.metric("P75 (Banda Alta)", f"S/. {radar_result.p75:,.0f}")
+
+        st.info(f"🎯 **Posicionamiento en Mercado:** {radar_result.posicion_mercado}")
+
     with c_post:
         st.markdown("#### 3. Asociar Evaluación a Postulación")
         with SessionLocal() as db:
@@ -119,7 +177,9 @@ def render_simulador_ctc_page() -> None:
             st.caption("No hay postulaciones registradas en base de datos.")
             return
 
-        selected_p_id = st.selectbox("Postulación:", list(post_map.keys()), format_func=lambda x: post_map[x])
+        p_keys = list(post_map.keys())
+        default_ix = p_keys.index(target_p_id) if target_p_id in p_keys else 0
+        selected_p_id = st.selectbox("Postulación:", p_keys, index=default_ix, format_func=lambda x: post_map[x])
 
         if st.button("💾 Guardar Simulación en la Postulación", type="primary", use_container_width=True):
             if not enforce_write_permission("Guardar CTC"):
@@ -143,6 +203,11 @@ def render_simulador_ctc_page() -> None:
                         factor_ctc=1.56,
                     )
                     db.commit()
+                    st.session_state["last_ctc_saved"] = {
+                        "post_id": selected_p_id,
+                        "semaforo": semaforo,
+                        "salario": calc_result['salario_bruto_mensual'],
+                    }
                     st.success(f"✅ Evaluación CTC registrada con ID: `{eval_ctc.id}`.")
             except Exception as e:
                 st.error(f"Error al guardar evaluación CTC: {e}")
@@ -172,6 +237,11 @@ def render_simulador_ctc_page() -> None:
                                     justification=just_aprob or "Aprobación de excepción por Head of TA.",
                                 )
                                 db.commit()
+                                st.session_state["last_ctc_saved"] = {
+                                    "post_id": selected_p_id,
+                                    "semaforo": "Aprobado_Por_Excepcion",
+                                    "salario": calc_result['salario_bruto_mensual'],
+                                }
                                 st.success("🎉 Excepción presupuestal aprobada y auditada.")
                             else:
                                 st.warning("Guarde primero la simulación antes de aprobar la excepción.")
@@ -179,3 +249,67 @@ def render_simulador_ctc_page() -> None:
                         st.error(f"Error aprobando excepción: {e}")
             else:
                 st.info("ℹ️ La aprobación de esta excepción salarial está restringida al rol `Head_of_Talent_Acquisition`.")
+
+    # Terna One-Pager generation after CTC validation
+    last_ctc = st.session_state.get("last_ctc_saved")
+    if last_ctc and last_ctc.get("post_id") == selected_p_id:
+        st.markdown("---")
+        st.markdown(
+            f'<div style="background: #0A192F; border: 1px solid #38BDF8; border-radius: 8px; padding: 14px 18px; margin: 12px 0;">'
+            f'<div style="font-size: 11px; color: #38BDF8; font-weight: 700; text-transform: uppercase;">🚀 Siguiente Paso: Presentación de Terna al Cliente</div>'
+            f'<div style="font-size: 15px; color: white; margin: 4px 0;">La viabilidad financiera para <b>{post_map.get(selected_p_id, '')}</b> ha sido registrada. ¿Desea generar la Ficha Ejecutiva One-Pager para el Delivery / Cliente?</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+        if st.button("📄 Generar Ficha Ejecutiva One-Pager para Cliente ➔", type="primary", use_container_width=True, key="btn_open_op_ctc"):
+            st.session_state["show_one_pager_in_ctc"] = True
+
+    if st.session_state.get("show_one_pager_in_ctc"):
+        st.markdown("---")
+        st.markdown("### 📄 Ficha Ejecutiva One-Pager (Terna para Cliente)")
+        with SessionLocal() as db:
+            post_repo = PostulacionRepository(db)
+            cand_repo = CandidatoRepository(db)
+            p_obj = post_repo.get_by_id(selected_p_id)
+            c_obj = cand_repo.get_by_id(p_obj.candidato_id) if p_obj else None
+
+        if p_obj and c_obj:
+            dni_mask = (c_obj.numero_documento[:4] + "****") if c_obj.numero_documento else "N/D"
+            import json
+            skills_parsed = []
+            if c_obj.skills_extraidas:
+                try:
+                    skills_parsed = json.loads(c_obj.skills_extraidas) if isinstance(c_obj.skills_extraidas, str) else list(c_obj.skills_extraidas)
+                except Exception:
+                    skills_parsed = [s.strip() for s in str(c_obj.skills_extraidas).split(",") if s.strip()]
+            if not skills_parsed:
+                skills_parsed = [p_obj.perfil_tecnico, "Git", "Clean Code", "Metodologías Ágiles"]
+
+            op_html = OnePagerBuilder.build_html(
+                candidato_nombre=c_obj.nombres_completos,
+                dni_masked=dni_mask,
+                perfil_puesto=p_obj.perfil_tecnico,
+                cliente=p_obj.cliente_cuenta,
+                anios_experiencia=c_obj.anios_experiencia_total or 4.0,
+                distrito=c_obj.distrito_residencia or "Lima",
+                modalidad=p_obj.modalidad_contrato or "Híbrido",
+                skills=skills_parsed,
+                resumen_tecnico=c_obj.resumen_cv or f"Profesional especializado en {p_obj.perfil_tecnico} con sólida trayectoria en proyectos empresariales.",
+                disponibilidad="Inmediata / 15 días",
+                expectativa_salarial=calc_result["salario_bruto_mensual"],
+                bgc_status="Aprobado (Sin antecedentes)" if not c_obj.alerta_fraude else "En Verificación",
+                evaluador_nombre=user.get("nombres_completos", "Senior Technical Recruiter"),
+                dictamen_humano="Recomendado para Terna Final",
+                alumni_tcs=getattr(c_obj, "alumni_tcs", False),
+                fit_score=88.5,
+            )
+
+            st.components.v1.html(op_html, height=480, scrolling=True)
+            st.download_button(
+                label="💾 Descargar One-Pager HTML para Hiring Manager",
+                data=op_html,
+                file_name=f"Ficha_Ejecutiva_{c_obj.nombres_completos.replace(' ', '_')}.html",
+                mime="text/html",
+                use_container_width=True,
+                key="btn_dl_op_ctc",
+            )

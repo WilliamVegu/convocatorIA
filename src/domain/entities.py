@@ -256,3 +256,89 @@ class RegistroAuditoria:
     nombre_archivo_adjunto: Optional[str] = None
     hash_integridad_sha256: Optional[str] = None
     timestamp: datetime = field(default_factory=utc_now)
+
+
+@dataclass
+class FitGapResult:
+    """Semantic comparison result between candidate CV and RGS vacancy."""
+
+    score_porcentaje: float
+    fortalezas: List[str] = field(default_factory=list)
+    gaps_criticos: List[str] = field(default_factory=list)
+    recomendacion: str = ""
+
+
+@dataclass
+class CheatSheetPregunta:
+    """Technical screening question with expected concepts for non-technical recruiters."""
+
+    pregunta: str
+    concepto_clave: str
+    respuesta_esperada: str
+    criterio_evaluacion: str = "Aprobado si menciona conceptos clave"
+
+
+@dataclass
+class CheatSheet:
+    """Cheat sheet bundle for phone screening call."""
+
+    postulacion_id: str
+    perfil: str
+    preguntas: List[CheatSheetPregunta] = field(default_factory=list)
+
+
+@dataclass
+class GitHubAudit:
+    """Audit analysis result from public GitHub profile."""
+
+    usuario: str
+    repos_propios: int = 0
+    repos_forks: int = 0
+    stars_totales: int = 0
+    lenguajes_principales: List[str] = field(default_factory=list)
+    commits_recientes_count: int = 0
+    actividad_verificada: bool = False
+    perfil_url: str = ""
+    existe: bool = True
+    resumen_actividad: str = ""
+
+    @property
+    def username(self) -> str:
+        return self.usuario
+
+
+@dataclass
+class SalaryRadar:
+    """Salary benchmarking percentiles and positioning for Lima tech market."""
+
+    rol: str
+    seniority: str
+    p25: float
+    p50: float
+    p75: float
+    salario_candidato: float
+    posicion_mercado: str = "En rango competitivo"
+
+
+@dataclass
+class RGSNormalizado:
+    """Structured Job Description from raw requirement text."""
+
+    rgs_id: str
+    titulo_puesto: str
+    cliente: str
+    seniority: str
+    banda_salarial_pen: str
+    must_have: List[str] = field(default_factory=list)
+    nice_to_have: List[str] = field(default_factory=list)
+    cadena_booleana_linkedin: str = ""
+    modalidad_sugerida: str = "Híbrido"
+
+    @property
+    def modalidad(self) -> str:
+        return self.modalidad_sugerida
+
+    @property
+    def cadena_booleana(self) -> str:
+        return self.cadena_booleana_linkedin
+

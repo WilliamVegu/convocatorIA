@@ -13,7 +13,7 @@ from src.services.deduplication_service import DeduplicationService
 from src.services.alumni_service import AlumniService
 from src.services.audit_service import AuditService
 from src.services.adecco_service import AdeccoService
-from src.ui.session import get_current_user, enforce_write_permission
+from src.ui.session import get_current_user, enforce_write_permission, navigate_to
 from src.ui.theme import render_badge
 
 
@@ -163,6 +163,13 @@ def render_validador_adecco_page() -> None:
                         db.commit()
 
                         st.success(f"🎉 Éxito: {imported} candidatos limpios importados atómicamente a la base de datos corporativa.")
+                        c_ad1, c_ad2 = st.columns(2)
+                        with c_ad1:
+                            if st.button("📋 Ver Candidatos en Cartera ➔", type="primary", use_container_width=True, key="btn_ad_cartera"):
+                                navigate_to("p1_ficha")
+                        with c_ad2:
+                            if st.button("🔒 Ver Reporte de Exclusiones ➔", use_container_width=True, key="btn_ad_excl"):
+                                navigate_to("p5_exclusiones")
                         st.session_state["adecco_eval_result"] = None
                 except Exception as e:
                     st.error(f"Error durante importación atómica: {e}")

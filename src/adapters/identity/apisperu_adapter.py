@@ -19,6 +19,22 @@ class APIsPeruDNIAdapter(DNIPort):
         self.base_url = config.APISPERU_BASE_URL.rstrip("/")
         self.token = config.APISPERU_TOKEN
 
+    def _build_url(self, endpoint: str, identifier: str) -> str:
+        """Construct canonical endpoint URL supporting various base URL formats."""
+        base = self.base_url.rstrip("/")
+        if base.endswith("/dni"):
+            base = base[:-4]
+        elif base.endswith("/ruc"):
+            base = base[:-4]
+
+        if not base.endswith("/api/v1"):
+            if base.endswith("/api"):
+                base = f"{base}/v1"
+            elif not base.endswith("/v1"):
+                base = f"{base}/api/v1"
+
+        return f"{base}/{endpoint}/{identifier}"
+
     def resolve_dni(self, dni: str) -> Dict[str, Any]:
         cleaned_dni = dni.strip()
         if not (len(cleaned_dni) == 8 and cleaned_dni.isdigit()):
@@ -43,34 +59,89 @@ class APIsPeruDNIAdapter(DNIPort):
                     "ubigeo": cached.ubigeo,
                     "distrito": cached.distrito,
                     "direccion": cached.direccion,
+                    "codigo_verificacion": "",
+                    "codigo_verificacion_letra": "",
                 },
             }
 
         # 2. Second order: APIsPERU endpoint
         if self.token:
             try:
-                url = f"{self.base_url}/{cleaned_dni}"
+                url = self._build_url("dni", cleaned_dni)
                 headers = {
                     "Authorization": f"Bearer {self.token}",
                     "Content-Type": "application/json",
                 }
-                resp = requests.get(url, headers=headers, timeout=4.0)
+                params = {"token": self.token}
+                resp = requests.get(url, headers=headers, params=params, timeout=5.0)
                 if resp.status_code == 200:
                     data = resp.json()
-                    nombres = data.get("nombres", "").strip()
-                    paterno = data.get("apellidoPaterno", "").strip()
-                    materno = data.get("apellidoMaterno", "").strip()
-                    fecha_nac_str = data.get("fechaNacimiento")
+                    # Check for ErrorResponse: {"success": false, "message": "..."}
+                    if data.get("success") is False:
+                        msg = data.get("message", "DNI no encontrado en RENIEC.")
+                        logger.warning(f"APIsPERU DNI {cleaned_dni}: {msg}")
+                        return {
+                            "success": False,
+                            "fuente_origen": "APISPERU_ERROR",
+                            "mensaje": msg,
+                            "estado_identidad": "Pendiente_Regularizacion",
+                            "regularizacion_pendiente": True,
+                            "datos": {
+                                "dni": cleaned_dni,
+                                "nombres": "",
+                                "apellido_paterno": "",
+                                "apellido_materno": "",
+                                "nombres_completos": "",
+                                "fecha_nacimiento": None,
+                                "ubigeo": None,
+                                "distrito": None,
+                                "direccion": None,
+                                "codigo_verificacion": "",
+                                "codigo_verificacion_letra": "",
+                            },
+                        }
+
+                    nombres = (data.get("nombres") or data.get("nombre") or "").strip()
+                    paterno = (data.get("apellidoPaterno") or data.get("apellido_paterno") or "").strip()
+                    materno = (data.get("apellidoMaterno") or data.get("apellido_materno") or "").strip()
+
+                    if not nombres and not paterno:
+                        msg = data.get("message", "No se obtuvieron nombres válidos para el DNI.")
+                        logger.warning(f"APIsPERU DNI {cleaned_dni}: {msg}")
+                        return {
+                            "success": False,
+                            "fuente_origen": "APISPERU_NOT_FOUND",
+                            "mensaje": msg,
+                            "estado_identidad": "Pendiente_Regularizacion",
+                            "regularizacion_pendiente": True,
+                            "datos": {
+                                "dni": cleaned_dni,
+                                "nombres": "",
+                                "apellido_paterno": "",
+                                "apellido_materno": "",
+                                "nombres_completos": "",
+                                "fecha_nacimiento": None,
+                                "ubigeo": None,
+                                "distrito": None,
+                                "direccion": None,
+                                "codigo_verificacion": "",
+                                "codigo_verificacion_letra": "",
+                            },
+                        }
+
+                    fecha_nac_str = data.get("fechaNacimiento") or data.get("fecha_nacimiento")
                     fecha_nac = None
                     if fecha_nac_str:
                         try:
-                            fecha_nac = date.fromisoformat(fecha_nac_str)
+                            fecha_nac = date.fromisoformat(str(fecha_nac_str))
                         except Exception:
                             pass
 
                     ubigeo = data.get("ubigeo")
                     distrito = data.get("distrito")
                     direccion = data.get("direccion")
+                    cod_verifica = str(data.get("codVerifica") or data.get("cod_verifica") or "")
+                    cod_verifica_letra = str(data.get("codVerificaLetra") or "")
 
                     # Persist to local cache
                     self.repo.set_cached_dni(
@@ -100,8 +171,12 @@ class APIsPeruDNIAdapter(DNIPort):
                             "ubigeo": ubigeo,
                             "distrito": distrito,
                             "direccion": direccion,
+                            "codigo_verificacion": cod_verifica,
+                            "codigo_verificacion_letra": cod_verifica_letra,
                         },
                     }
+                else:
+                    logger.warning(f"APIsPERU HTTP {resp.status_code} para DNI {cleaned_dni}: {resp.text}")
             except Exception as e:
                 logger.warning(f"Error consultando APIsPERU para DNI {cleaned_dni}: {e}")
 
@@ -110,6 +185,7 @@ class APIsPeruDNIAdapter(DNIPort):
         return {
             "success": False,
             "fuente_origen": "CAPTURA_MANUAL_OFFLINE",
+            "mensaje": "DNI no disponible en caché ni en APIsPERU. Ingrese los datos manualmente.",
             "estado_identidad": "Pendiente_Regularizacion",
             "regularizacion_pendiente": True,
             "datos": {
@@ -122,5 +198,87 @@ class APIsPeruDNIAdapter(DNIPort):
                 "ubigeo": None,
                 "distrito": None,
                 "direccion": None,
+                "codigo_verificacion": "",
+                "codigo_verificacion_letra": "",
             },
         }
+
+    def resolve_ruc(self, ruc: str) -> Dict[str, Any]:
+        """Resolve company / taxpayer details via APIsPERU RUC endpoint (SUNAT)."""
+        cleaned_ruc = ruc.strip()
+        if not (len(cleaned_ruc) == 11 and cleaned_ruc.isdigit()):
+            raise ValueError(f"RUC inválido '{ruc}'. Debe contener exactamente 11 dígitos numéricos.")
+
+        if not self.token:
+            return {
+                "success": False,
+                "mensaje": "Token de APIsPERU no configurado.",
+                "fuente_origen": "ERROR_CONFIG",
+                "datos": {},
+            }
+
+        try:
+            url = self._build_url("ruc", cleaned_ruc)
+            headers = {
+                "Authorization": f"Bearer {self.token}",
+                "Content-Type": "application/json",
+            }
+            params = {"token": self.token}
+            resp = requests.get(url, headers=headers, params=params, timeout=5.0)
+
+            if resp.status_code == 200:
+                data = resp.json()
+                if data.get("success") is False:
+                    msg = data.get("message", "RUC no encontrado en SUNAT.")
+                    logger.warning(f"APIsPERU RUC {cleaned_ruc}: {msg}")
+                    return {
+                        "success": False,
+                        "fuente_origen": "APISPERU_ERROR",
+                        "mensaje": msg,
+                        "datos": {},
+                    }
+
+                razon_social = (data.get("razonSocial") or data.get("razon_social") or "").strip()
+                if not razon_social:
+                    return {
+                        "success": False,
+                        "fuente_origen": "APISPERU_NOT_FOUND",
+                        "mensaje": "RUC no encontrado en SUNAT.",
+                        "datos": {},
+                    }
+
+                return {
+                    "success": True,
+                    "fuente_origen": "APISPERU_LIVE_SUNAT",
+                    "datos": {
+                        "ruc": cleaned_ruc,
+                        "razon_social": razon_social,
+                        "nombre_comercial": data.get("nombreComercial") or "",
+                        "estado": data.get("estado") or "ACTIVO",
+                        "condicion": data.get("condicion") or "HABIDO",
+                        "direccion": data.get("direccion") or "",
+                        "departamento": data.get("departamento") or "",
+                        "provincia": data.get("provincia") or "",
+                        "distrito": data.get("distrito") or "",
+                        "ubigeo": data.get("ubigeo") or "",
+                        "telefonos": data.get("telefonos") or [],
+                        "capital": data.get("capital") or "",
+                    },
+                }
+            else:
+                logger.warning(f"APIsPERU RUC HTTP {resp.status_code}: {resp.text}")
+                return {
+                    "success": False,
+                    "fuente_origen": "APISPERU_HTTP_ERROR",
+                    "mensaje": f"Error del servidor APIsPERU (HTTP {resp.status_code}).",
+                    "datos": {},
+                }
+        except Exception as e:
+            logger.warning(f"Error consultando APIsPERU RUC {cleaned_ruc}: {e}")
+            return {
+                "success": False,
+                "fuente_origen": "APISPERU_EXCEPTION",
+                "mensaje": f"Fallo de conexión con APIsPERU: {e}",
+                "datos": {},
+            }
+
